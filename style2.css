@@ -33,6 +33,9 @@ body {
   display: flex;
   justify-content: center;
 }
+
+.hidden { display: none !important; }
+
 .search-bar {
   background: var(--primary-xlight);
   border: none;
