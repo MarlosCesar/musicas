@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Seu aplicativo de cifras"/>
+  <meta name="theme-color" content="#1A202C"/>
+  <title>Cifras 2.0</title>
+  <link rel="manifest" href="manifest2.json" />
+  <link rel="icon" type="image/svg+xml" href="favicon2.svg" />
+  <link rel="stylesheet" href="style2.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-container">
+    <header class="header">
+      <input id="search-bar" class="search-bar" type="search" placeholder="Search" autocomplete="off" />
+    </header>
+    <nav id="tabs" class="tabs-container" role="tablist"></nav>
+    <div id="tab-scroll-left" class="tab-arrow left">&#8592;</div>
+    <div id="tab-scroll-right" class="tab-arrow right">&#8594;</div>
+    <main>
+      <section id="cifra-list-section" class="cifra-list-section">
+        <div id="empty-state" class="empty-state">
+          <svg width="120" height="120" fill="none" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="24" fill="#C4D4D4" fill-opacity="0.15"/>
+            <path d="M40 50v20a10 10 0 0 0 20 0V60h10v10a10 10 0 1 0 20 0V50a10 10 0 1 0-20 0v10H60V50a10 10 0 0 0-20 0z" fill="#6B8A8A"/>
+            <circle cx="60" cy="60" r="34" stroke="#6B8A8A" stroke-width="2"/>
+          </svg>
+          <div class="empty-text">Adicione sua primeira cifra</div>
+        </div>
+        <ul id="cifra-list" class="cifra-list"></ul>
+      </section>
+      <div id="float-controls" class="float-controls hidden">
+        <button id="select-all-btn" title="Selecionar todas"><span>&#9745;</span></button>
+        <button id="clear-selection-btn" title="Limpar seleção"><span>&#10006;</span></button>
+        <button id="delete-selected-btn" title="Excluir selecionadas"><span>&#128465;</span></button>
+      </div>
+    </main>
+    <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra">+</button>
+    <div id="fab-menu" class="fab-menu hidden">
+      <button id="fab-local" class="fab-menu-item">Buscar no celular</button>
+      <button id="fab-cloud" class="fab-menu-item">Buscar na Nuvem</button>
+    </div>
+    <input id="file-input" type="file" class="hidden" accept="image/*" multiple />
+    <!-- Modal para seleção na nuvem -->
+    <div id="cloud-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <button id="close-cloud-modal" class="close-modal" aria-label="Fechar">&times;</button>
+        <h2>Cifras na Nuvem</h2>
+        <div id="cloud-list" class="cloud-list"></div>
+        <button id="add-cloud-btn" class="add-btn">Adicionar Selecionadas</button>
+      </div>
+    </div>
+    <!-- Modal para modo da aba -->
+    <div id="tab-mode-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <button id="close-tab-mode-modal" class="close-modal" aria-label="Fechar">&times;</button>
+        <h2>Alterar para modo:</h2>
+        <form>
+          <label><input type="radio" name="tab-mode" value="online"> Online</label>
+          <label><input type="radio" name="tab-mode" value="offline"> Offline</label>
+        </form>
+        <button id="save-tab-mode-btn" class="add-btn">Salvar</button>
+      </div>
+    </div>
+    <!-- Modal para adicionar nova aba -->
+    <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <button id="close-add-tab-modal" class="close-modal" aria-label="Fechar">&times;</button>
+        <h2>Nova Aba</h2>
+        <input id="add-tab-name" type="text" placeholder="Nome da nova aba" />
+        <div>
+          <label><input type="radio" name="tab-privacy" value="public" checked> Visível para todos</label>
+          <label><input type="radio" name="tab-privacy" value="local"> Apenas neste dispositivo</label>
+        </div>
+        <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
+      </div>
+    </div>
+    <div id="fullscreen-overlay" class="fullscreen-overlay hidden"></div>
+    <div id="toast" class="toast"></div>
+  </div>
+  <script src="script2.js"></script>
+</body>
+</html>
