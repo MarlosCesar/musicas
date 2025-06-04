@@ -390,7 +390,10 @@ function startPolling() {
 }
 
 // --- Startup ---
-window.onload = () => {
+window.onload = function() {
+  // Garante que todos overlays estão fechados ao carregar a página
+  document.querySelectorAll('.modal, .fullscreen-overlay, .fab-menu')
+    .forEach(e => e.classList.add('hidden'));
   loadState();
   renderTabs();
   setTab(state.currentTab);
