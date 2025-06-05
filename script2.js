@@ -1,3 +1,4 @@
+// === Configuração inicial ===
 const TABS_DEFAULT = [
   { name: "Domingo Manhã", type: "default", mode: "offline" },
   { name: "Domingo Noite", type: "default", mode: "offline" },
@@ -5,22 +6,21 @@ const TABS_DEFAULT = [
   { name: "Quarta", type: "default", mode: "offline" },
   { name: "Santa Ceia", type: "default", mode: "offline" }
 ];
-const LOCALSTORE_KEY = "cifras2-app-state-v2";
+const LOCALSTORE_KEY = "cifras2-app-state-v3";
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
-const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com"; 
+const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
 
 let state = {
   tabs: [...TABS_DEFAULT],
   cifras: {},
   selection: {},
-  currentTab: "Domingo Manhã",
-  search: "",
+  currentTab: "Domingo Manhã"
 };
 
+// === Utilidades ===
 function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
-
 function saveState() {
   localStorage.setItem(LOCALSTORE_KEY, JSON.stringify({
     tabs: state.tabs,
@@ -39,60 +39,28 @@ function loadState() {
     state.currentTab = loaded.currentTab || "Domingo Manhã";
   }
 }
-function setTab(tabName) {
-  state.currentTab = tabName;
-  renderTabs();
-  renderCifras();
-  renderFloatControls();
+function isSelected(id) {
+  const tab = state.currentTab;
+  return state.selection[tab] && state.selection[tab].has(id);
 }
-function addTab(name, privacy = "public", mode = "offline") {
-  if (state.tabs.some(t => t.name === name)) return false;
-  state.tabs.push({ name, type: "custom", privacy, mode });
-  state.cifras[name] = [];
-  saveState(); renderTabs(); setTab(name);
-  return true;
-}
-function setTabMode(tabName, mode) {
-  const tab = state.tabs.find(t => t.name === tabName);
-  if (tab) {
-    if (mode === "offline") {
-      state.cifras[tabName] = [];
-      state.selection[tabName] = new Set();
-    }
-    tab.mode = mode;
-    saveState(); renderTabs(); renderCifras();
-  }
-}
-function removeCifras(tab, ids) {
-  state.cifras[tab] = (state.cifras[tab] || []).filter(cifra => !ids.includes(cifra.id));
-  state.selection[tab] = new Set();
-  saveState(); renderCifras(); renderFloatControls();
-}
-function clearSelection(tab) {
-  state.selection[tab] = new Set();
-  renderFloatControls();
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
 }
 
-// Logo recarrega a página mantendo as cifras
-document.addEventListener("DOMContentLoaded", () => {
-  const logo = document.querySelector(".logo");
-  if (logo) {
-    logo.style.cursor = "pointer";
-    logo.onclick = () => location.reload();
-  }
-});
-
-// Renderização das abas (igual ao anterior, omiti para foco no novo menu e upload)
-
+// === Tabs ===
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
+  if (!tabsElem) return;
   tabsElem.innerHTML = "";
-  state.tabs.forEach((tab, idx) => {
+  state.tabs.forEach((tab) => {
     const isSelected = state.currentTab === tab.name;
     const btn = document.createElement("button");
     btn.className = `tab${isSelected ? " active" : ""} ${tab.mode || "offline"}${tab.type === "custom" ? " custom" : ""}`;
 
-    // Botão X vermelho nas abas customizadas, à esquerda
+    // Botão X para abas custom
     if (tab.type === "custom") {
       const close = document.createElement("button");
       close.className = "tab-close";
@@ -115,7 +83,7 @@ function renderTabs() {
     tabLabel.onclick = () => setTab(tab.name);
     btn.appendChild(tabLabel);
 
-    // 3 pontos no lado direito
+    // 3 pontos
     const more = document.createElement("span");
     more.className = "tab-more";
     more.innerHTML = "&#8942;";
@@ -130,7 +98,19 @@ function renderTabs() {
   addBtn.onclick = showAddTabModal;
   tabsElem.appendChild(addBtn);
 }
-
+function setTab(tabName) {
+  state.currentTab = tabName;
+  renderTabs();
+  renderCifras();
+  renderFloatControls();
+}
+function addTab(name, privacy = "public", mode = "offline") {
+  if (state.tabs.some(t => t.name === name)) return false;
+  state.tabs.push({ name, type: "custom", privacy, mode });
+  state.cifras[name] = [];
+  saveState(); renderTabs(); setTab(name);
+  return true;
+}
 function removeTab(tabName) {
   state.tabs = state.tabs.filter(t => t.name !== tabName);
   delete state.cifras[tabName];
@@ -139,9 +119,63 @@ function removeTab(tabName) {
   saveState(); renderTabs(); setTab(state.currentTab);
 }
 
+// === Modal para adicionar aba ===
+function showAddTabModal() {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <label>Nome da nova aba:</label>
+      <input type="text" id="add-tab-name" />
+      <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
+      <button id="close-add-tab-modal" class="close-modal">&times;</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const input = modal.querySelector("#add-tab-name");
+  input.focus();
+
+  modal.querySelector("#save-add-tab-btn").onclick = () => {
+    const name = input.value.trim();
+    if (name) {
+      addTab(name);
+      document.body.removeChild(modal);
+    }
+  };
+  modal.querySelector("#close-add-tab-modal").onclick = () => document.body.removeChild(modal);
+}
+
+// === Modal para modo da aba (pode adaptar conforme seu design) ===
+function showTabModeModal(tab) {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <label>Modo da aba:</label>
+      <div>
+        <label><input type="radio" name="tab-mode" value="offline" ${tab.mode === "offline" ? "checked" : ""}/> Offline</label>
+        <label><input type="radio" name="tab-mode" value="online" ${tab.mode === "online" ? "checked" : ""}/> Online</label>
+      </div>
+      <button id="save-tab-mode-btn" class="add-btn">Salvar</button>
+      <button id="close-tab-mode-modal" class="close-modal">&times;</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  modal.querySelector("#save-tab-mode-btn").onclick = () => {
+    const mode = modal.querySelector('input[name="tab-mode"]:checked').value;
+    tab.mode = mode;
+    saveState();
+    renderTabs(); renderCifras();
+    document.body.removeChild(modal);
+  };
+  modal.querySelector("#close-tab-mode-modal").onclick = () => document.body.removeChild(modal);
+}
+
+// === Lista de cifras ===
 function renderCifras() {
   const list = document.getElementById("cifra-list");
   const empty = document.getElementById("empty-state");
+  if (!list || !empty) return;
   const tab = state.currentTab;
   let cifras = (state.cifras[tab] || []);
   list.innerHTML = "";
@@ -183,45 +217,60 @@ function renderCifras() {
   }
 }
 
-// --- FAB menu ---
-document.getElementById("fab").onclick = (e) => {
-  e.stopPropagation();
-  document.getElementById("fab-menu").classList.toggle("hidden");
-};
-document.body.onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
-};
+// === FAB menu (Buscar, Tirar foto, Upload) ===
+document.addEventListener("DOMContentLoaded", () => {
+  // Logo reload
+  const logo = document.querySelector(".logo");
+  if (logo) logo.onclick = () => location.reload();
 
-document.getElementById("fab-buscar").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
-  document.getElementById("search-bar").focus();
-};
-document.getElementById("fab-camera").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
-  openCameraCapture();
-};
-document.getElementById("fab-upload").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
-  document.getElementById("file-input").click();
-};
-
-document.getElementById("file-input").onchange = async (e) => {
-  const files = Array.from(e.target.files || []);
-  const tab = state.currentTab;
-  if (!state.cifras[tab]) state.cifras[tab] = [];
-  for (const file of files) {
-    if (!file.type.startsWith("image/")) continue;
-    const url = URL.createObjectURL(file);
-    const id = Math.random().toString(36).slice(2) + Date.now();
-    state.cifras[tab].push({ id, url, title: file.name, fullUrl: url, isImage: true });
+  const fab = document.getElementById("fab");
+  if (fab) {
+    fab.onclick = (e) => {
+      e.stopPropagation();
+      const menu = document.getElementById("fab-menu");
+      if (menu) menu.classList.toggle("hidden");
+    };
   }
-  saveState();
-  renderCifras();
-  renderFloatControls();
-  toast(`${files.length} cifra(s) adicionada(s)!`);
-};
+  document.body.onclick = () => {
+    const menu = document.getElementById("fab-menu");
+    if (menu) menu.classList.add("hidden");
+  };
 
-// --- Camera Capture ---
+  const fabBuscar = document.getElementById("fab-buscar");
+  if (fabBuscar) fabBuscar.onclick = () => {
+    document.getElementById("fab-menu").classList.add("hidden");
+    document.getElementById("search-bar").focus();
+  };
+  const fabCamera = document.getElementById("fab-camera");
+  if (fabCamera) fabCamera.onclick = () => {
+    document.getElementById("fab-menu").classList.add("hidden");
+    openCameraCapture();
+  };
+  const fabUpload = document.getElementById("fab-upload");
+  if (fabUpload) fabUpload.onclick = () => {
+    document.getElementById("fab-menu").classList.add("hidden");
+    document.getElementById("file-input").click();
+  };
+
+  const fileInput = document.getElementById("file-input");
+  if (fileInput) fileInput.onchange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    const tab = state.currentTab;
+    if (!state.cifras[tab]) state.cifras[tab] = [];
+    for (const file of files) {
+      if (!file.type.startsWith("image/")) continue;
+      const url = URL.createObjectURL(file);
+      const id = Math.random().toString(36).slice(2) + Date.now();
+      state.cifras[tab].push({ id, url, title: file.name, fullUrl: url, isImage: true });
+    }
+    saveState();
+    renderCifras();
+    renderFloatControls();
+    toast(`${files.length} cifra(s) adicionada(s)!`);
+  };
+});
+
+// === Camera Capture ===
 function openCameraCapture() {
   const modal = document.createElement("div");
   modal.className = "modal";
@@ -273,10 +322,11 @@ function openCameraCapture() {
   };
 }
 
-// --- Float Controls com Renomear e Upload ---
+// === Float Controls: Excluir, Renomear, Upload ===
 function renderFloatControls() {
   const float = document.getElementById("float-controls");
   const tab = state.currentTab;
+  if (!float) return;
   const selected = (state.selection[tab] && state.selection[tab].size) ? Array.from(state.selection[tab]) : [];
   float.innerHTML = '';
 
@@ -313,7 +363,7 @@ function renderFloatControls() {
   }
 }
 
-// --- Modal de Renomear ---
+// === Modal de Renomear ===
 function showRenameModal(cifraId) {
   const tab = state.currentTab;
   const cifra = (state.cifras[tab] || []).find(c => c.id === cifraId);
@@ -351,13 +401,12 @@ function showRenameModal(cifraId) {
   modal.querySelector("#close-rename-modal").onclick = () => document.body.removeChild(modal);
 }
 
-// --- Modal de Upload ---
+// === Modal de Upload ===
 function showUploadModal(ids) {
   const tab = state.currentTab;
   const cifras = (state.cifras[tab] || []).filter(c => ids.includes(c.id));
   showUploadPrompt(cifras);
 }
-
 function showUploadPrompt(cifras) {
   const modal = document.createElement("div");
   modal.className = "modal";
@@ -382,8 +431,7 @@ function showUploadPrompt(cifras) {
   };
 }
 
-// --- Upload para Google Drive com OAuth2 ---
-// Requer autenticação OAuth2 do usuário dono da pasta, ou token de serviço compartilhado
+// === Upload para Google Drive com OAuth2 ===
 async function uploadCifraToDrive(cifra) {
   const access_token = window.GDRIVE_ACCESS_TOKEN || null;
   if (!access_token) {
@@ -397,11 +445,9 @@ async function uploadCifraToDrive(cifra) {
     name: cifra.title + ".jpg",
     parents: [GOOGLE_DRIVE_FOLDER_ID]
   };
-
   const form = new FormData();
   form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
   form.append("file", blob);
-
   await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
     method: "POST",
     headers: {
@@ -411,21 +457,21 @@ async function uploadCifraToDrive(cifra) {
   });
 }
 
-// --- OAuth2 Google Sign-In ---
+// === OAuth2 Google Sign-In ===
 function requestGoogleAuth() {
   // Use a popup Google OAuth2 flow
-  const redirect_uri = window.location.origin + window.location.pathname; // ou uma rota dedicada
+  const redirect_uri = window.location.origin + window.location.pathname;
   const scope = encodeURIComponent("https://www.googleapis.com/auth/drive.file");
   const client_id = GOOGLE_CLIENT_ID;
   const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=token&scope=${scope}&prompt=consent`;
-
   window.open(authUrl, "_blank", "width=500,height=650");
   alert('Após autenticar, copie o access_token da URL e cole no console como: window.GDRIVE_ACCESS_TOKEN = "SEU_TOKEN_AQUI";');
 }
 
-// --- Fullscreen ---
+// === Fullscreen ===
 function openFullscreen(url, title, isImage = true) {
   const overlay = document.getElementById("fullscreen-overlay");
+  if (!overlay) return;
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper">
@@ -444,17 +490,7 @@ function openFullscreen(url, title, isImage = true) {
   }
 }
 
-function isSelected(id) {
-  const tab = state.currentTab;
-  return state.selection[tab] && state.selection[tab].has(id);
-}
-function toast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2000);
-}
-
+// === Inicialização ===
 window.onload = () => {
   loadState();
   renderTabs();
