@@ -5,10 +5,7 @@ const TABS_DEFAULT = [
   { name: "Quarta", type: "default", mode: "offline" },
   { name: "Santa Ceia", type: "default", mode: "offline" }
 ];
-const LOCALSTORE_KEY = "cifras2-app-state-v1";
-const POLL_INTERVAL = 5000; // ms, para atualizar abas online
-
-// Google Drive Config
+const LOCALSTORE_KEY = "cifras2-app-state-v2";
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
 const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 
@@ -18,12 +15,8 @@ let state = {
   selection: {}, // {tabName: Set}
   currentTab: "Domingo Manhã",
   search: "",
-  onlineCache: {}, // {tabName: [cifraObj]}
 };
 
-let pollTimer = null;
-
-// --- State Management ---
 function saveState() {
   localStorage.setItem(LOCALSTORE_KEY, JSON.stringify({
     tabs: state.tabs,
@@ -57,7 +50,15 @@ function addTab(name, privacy="public", mode="offline") {
 }
 function setTabMode(tabName, mode) {
   const tab = state.tabs.find(t => t.name === tabName);
-  if (tab) { tab.mode = mode; saveState(); renderTabs(); renderCifras(); }
+  if (tab) {
+    // Se mudar para offline, limpa cifras
+    if (mode === "offline") {
+      state.cifras[tabName] = [];
+      state.selection[tabName] = new Set();
+    }
+    tab.mode = mode;
+    saveState(); renderTabs(); renderCifras();
+  }
 }
 function removeCifras(tab, ids) {
   state.cifras[tab] = (state.cifras[tab] || []).filter(cifra => !ids.includes(cifra.id));
@@ -69,16 +70,16 @@ function clearSelection(tab) {
   updateFloatControls();
 }
 
-// --- UI Rendering ---
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
   tabsElem.innerHTML = "";
   state.tabs.forEach((tab, idx) => {
     const btn = document.createElement("button");
-    btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
+    btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}${tab.type === "custom" ? " custom" : ""}`;
     btn.textContent = tab.name;
     btn.onclick = () => setTab(tab.name);
-    // Menu nas abas padrão
+
+    // Menu das abas padrão
     if (tab.type === "default") {
       const more = document.createElement("span");
       more.className = "tab-more";
@@ -86,6 +87,26 @@ function renderTabs() {
       more.onclick = e => { e.stopPropagation(); showTabModeModal(tab); };
       btn.appendChild(more);
     }
+
+    // X vermelho nas abas customizadas
+    if (tab.type === "custom") {
+      const close = document.createElement("button");
+      close.className = "tab-close";
+      close.innerHTML = "&times;";
+      close.onclick = e => {
+        e.stopPropagation();
+        if (confirm(`Remover a aba "${tab.name}" e todas as suas cifras?`)) {
+          removeTab(tab.name);
+        }
+      };
+      btn.appendChild(close);
+
+      // No desktop, mostra X ao hover/focus; no touch, ao clicar
+      btn.onmouseenter = () => btn.classList.add("show-x");
+      btn.onmouseleave = () => btn.classList.remove("show-x");
+      btn.ontouchstart = () => btn.classList.toggle("show-x");
+    }
+
     tabsElem.appendChild(btn);
   });
   // Botão de adicionar aba
@@ -94,10 +115,17 @@ function renderTabs() {
   addBtn.textContent = "+";
   addBtn.onclick = showAddTabModal;
   tabsElem.appendChild(addBtn);
-
-  // Não há mais setas ou função handleTabScrollArrows, apenas scroll padrão.
-  // Mantém suporte a arrastar no touch e scroll horizontal com mouse:
+  // Suporte a scroll em touch e wheel
   let isDown = false, startX, scrollLeft;
+  tabsElem.onmousedown = e => { isDown = true; startX = e.pageX - tabsElem.offsetLeft; scrollLeft = tabsElem.scrollLeft; };
+  tabsElem.onmouseleave = () => isDown = false;
+  tabsElem.onmouseup = () => isDown = false;
+  tabsElem.onmousemove = e => {
+    if (!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - tabsElem.offsetLeft;
+    tabsElem.scrollLeft = scrollLeft - (x - startX);
+  };
   tabsElem.addEventListener('touchstart', e => {
     isDown = true; startX = e.touches[0].pageX - tabsElem.offsetLeft; scrollLeft = tabsElem.scrollLeft;
   });
@@ -114,15 +142,19 @@ function renderTabs() {
     }
   }, { passive: false });
 }
+function removeTab(tabName) {
+  state.tabs = state.tabs.filter(t => t.name !== tabName);
+  delete state.cifras[tabName];
+  delete state.selection[tabName];
+  if (state.currentTab === tabName) state.currentTab = TABS_DEFAULT[0].name;
+  saveState(); renderTabs(); setTab(state.currentTab);
+}
 function renderCifras() {
   const list = document.getElementById("cifra-list");
   const empty = document.getElementById("empty-state");
   const tab = state.currentTab;
   let cifras = (state.cifras[tab] || []);
-  // Filtro de busca
-  if (state.search && state.search.length > 0) {
-    cifras = cifras.filter(c => c.title.toLowerCase().includes(state.search.toLowerCase()));
-  }
+  // Filtro de busca NÃO afeta lista principal, somente search dropdown adiciona cifras.
   list.innerHTML = "";
   if (!cifras.length) {
     empty.style.display = "flex";
@@ -172,20 +204,11 @@ function updateFloatControls() {
   }
 }
 
-// --- FAB menu ---
+// FAB: Buscar apenas local, com pasta minimalista
 document.getElementById("fab").onclick = () => {
-  document.getElementById("fab-menu").classList.toggle("hidden");
-};
-document.getElementById("fab-local").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
 };
-document.getElementById("fab-cloud").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
-  showCloudModal();
-};
-
-// --- File input upload ---
+// File input upload
 document.getElementById("file-input").onchange = async (e) => {
   const files = Array.from(e.target.files || []);
   const tab = state.currentTab;
@@ -201,7 +224,7 @@ document.getElementById("file-input").onchange = async (e) => {
   toast(`${files.length} cifra(s) adicionada(s)!`);
 };
 
-// --- Float controls events ---
+// Float controls events
 document.getElementById("select-all-btn").onclick = () => {
   const tab = state.currentTab;
   if (!state.selection[tab]) state.selection[tab] = new Set();
@@ -226,22 +249,69 @@ document.getElementById("delete-selected-btn").onclick = () => {
   toast("Cifra(s) excluída(s).");
 };
 
-// --- Search bar ---
-document.getElementById("search-bar").oninput = async (e) => {
+// Search bar: mostra dropdown com sugestões do Google Drive
+const searchBar = document.getElementById("search-bar");
+const searchDropdown = document.getElementById("search-dropdown");
+let searchResults = [];
+let searchTimeout = null;
+searchBar.oninput = async (e) => {
   const val = e.target.value.trim();
-  state.search = val;
-  // Busca online se houver termo
-  if (val.length) {
-    // Busca no Google Drive
-    const files = await searchDrive(val);
-    // Mostra modal para selecionar
-    showCloudModal(files);
-  } else {
-    renderCifras();
+  if (searchTimeout) clearTimeout(searchTimeout);
+  if (val.length === 0) {
+    searchDropdown.classList.add("hidden");
+    searchResults = [];
+    return;
   }
+  searchDropdown.innerHTML = '<li style="color:#aaa;">Buscando cifras...</li>';
+  searchDropdown.classList.remove("hidden");
+  searchTimeout = setTimeout(async () => {
+    const files = await searchDrive(val);
+    searchResults = files;
+    if (!files.length) {
+      searchDropdown.innerHTML = '<li style="color:#aaa;">Nenhuma música encontrada</li>';
+      return;
+    }
+    searchDropdown.innerHTML = '';
+    files.forEach((f, idx) => {
+      const li = document.createElement("li");
+      li.textContent = f.name;
+      li.onclick = () => {
+        addCifraFromDrive(f);
+        searchDropdown.classList.add("hidden");
+        searchBar.value = "";
+      };
+      searchDropdown.appendChild(li);
+    });
+  }, 400);
 };
+searchBar.onfocus = () => {
+  if (searchResults.length) searchDropdown.classList.remove("hidden");
+};
+searchBar.onblur = () => setTimeout(() => searchDropdown.classList.add("hidden"), 180);
 
-// --- Modal: adicionar aba ---
+async function searchDrive(query) {
+  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink)&key=${GOOGLE_API_KEY}`;
+  const resp = await fetch(url);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.files || [];
+}
+function addCifraFromDrive(file) {
+  const tab = state.currentTab;
+  if (!state.cifras[tab]) state.cifras[tab] = [];
+  // Evitar duplicatas
+  if (state.cifras[tab].some(c => c.id === file.id)) return;
+  state.cifras[tab].push({
+    id: file.id,
+    title: file.name,
+    url: `https://drive.google.com/uc?export=view&id=${file.id}`
+  });
+  saveState();
+  renderCifras();
+  toast(`Cifra "${file.name}" adicionada!`);
+}
+
+// Modal: nova aba
 function showAddTabModal() {
   const modal = document.getElementById("add-tab-modal");
   modal.classList.remove("hidden");
@@ -256,8 +326,7 @@ function showAddTabModal() {
   };
   document.getElementById("close-add-tab-modal").onclick = () => modal.classList.add("hidden");
 }
-
-// --- Modal: modo da aba ---
+// Modal: modo da aba
 function showTabModeModal(tab) {
   const modal = document.getElementById("tab-mode-modal");
   modal.classList.remove("hidden");
@@ -270,65 +339,7 @@ function showTabModeModal(tab) {
   };
   document.getElementById("close-tab-mode-modal").onclick = () => modal.classList.add("hidden");
 }
-
-// --- Modal: nuvem ---
-function showCloudModal(files=[]) {
-  const modal = document.getElementById("cloud-modal");
-  modal.classList.remove("hidden");
-  const list = document.getElementById("cloud-list");
-  list.innerHTML = "";
-  // Busca se necessário
-  if (!files.length) {
-    list.innerHTML = "<div>Buscando cifras na nuvem...</div>";
-    searchDrive(state.search || "").then(files => showCloudModal(files));
-    return;
-  }
-  if (!files.length) {
-    list.innerHTML = "<div>Nenhum resultado encontrado.</div>";
-    return;
-  }
-  files.forEach(f => {
-    const label = document.createElement("label");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = f.id;
-    const img = document.createElement("img");
-    img.src = f.thumbnailLink || f.iconLink;
-    img.width = 40; img.height = 56; img.alt = f.name;
-    const span = document.createElement("span");
-    span.textContent = f.name;
-    label.appendChild(cb); label.appendChild(img); label.appendChild(span);
-    list.appendChild(label);
-  });
-  document.getElementById("add-cloud-btn").onclick = () => {
-    const selected = Array.from(list.querySelectorAll("input:checked")).map(cb => cb.value);
-    const tab = state.currentTab;
-    if (!state.cifras[tab]) state.cifras[tab] = [];
-    files.filter(f => selected.includes(f.id)).forEach(f => {
-      state.cifras[tab].push({
-        id: f.id,
-        title: f.name,
-        url: `https://drive.google.com/uc?export=view&id=${f.id}`
-      });
-    });
-    saveState();
-    renderCifras();
-    modal.classList.add("hidden");
-    toast(`${selected.length} cifra(s) adicionada(s) da nuvem!`);
-  };
-  document.getElementById("close-cloud-modal").onclick = () => modal.classList.add("hidden");
-}
-// --- Google Drive Search ---
-async function searchDrive(query) {
-  // Folder must be shared publicly!
-  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink)&key=${GOOGLE_API_KEY}`;
-  const resp = await fetch(url);
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  return data.files || [];
-}
-
-// --- Fullscreen ---
+// Fullscreen
 function openFullscreen(url) {
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
@@ -338,13 +349,12 @@ function openFullscreen(url) {
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
 }
 
-// --- Selection helpers ---
+// Selection helpers
 function isSelected(id) {
   const tab = state.currentTab;
   return state.selection[tab] && state.selection[tab].has(id);
 }
-
-// --- Toast ---
+// Toast
 function toast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
@@ -352,22 +362,9 @@ function toast(msg) {
   setTimeout(() => t.classList.remove("show"), 2000);
 }
 
-// --- Polling for online tabs ---
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    // Para simplificação: só online tabs, e simula atualização
-    state.tabs.filter(tab => tab.mode === "online").forEach(async tab => {
-      // Aqui deveria integrar com backend/realtime (ex: Firebase, WebSocket)
-      // Aqui apenas simula update local, mas pode ser expandido para uso real
-    });
-  }, POLL_INTERVAL);
-}
-
-// --- Startup ---
+// Inicialização
 window.onload = () => {
   loadState();
   renderTabs();
   setTab(state.currentTab);
-  startPolling();
 };
