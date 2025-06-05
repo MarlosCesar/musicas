@@ -114,27 +114,6 @@ body {
   transition: background 0.2s;
 }
 .tab-add:hover { background: var(--accent-hover);}
-.tab-arrow {
-  position: absolute;
-  top: 50px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: var(--gray-mid);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0.5;
-  z-index: 3;
-  cursor: pointer;
-  transition: opacity 0.22s;
-  font-size: 1.6rem;
-  pointer-events: none;
-}
-.tab-arrow.left { left: 2px; }
-.tab-arrow.right { right: 2px; }
-.tab-arrow.visible { opacity: 0.85; pointer-events: all; }
 .cifra-list-section {
   flex: 1;
   min-height: 200px;
