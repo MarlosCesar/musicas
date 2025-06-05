@@ -14,16 +14,27 @@
 <body>
   <div class="app-container">
     <header class="header">
-      <input id="search-bar" class="search-bar" type="search" placeholder="Search" autocomplete="off" />
+      <div class="header-content">
+        <div class="logo">Cifras</div>
+        <div class="search-wrap">
+          <input id="search-bar" class="search-bar" type="search" placeholder="Search" autocomplete="off" />
+          <ul id="search-dropdown" class="search-dropdown hidden"></ul>
+        </div>
+      </div>
     </header>
     <nav id="tabs" class="tabs-container" role="tablist"></nav>
-     <main>
+    <main>
       <section id="cifra-list-section" class="cifra-list-section">
         <div id="empty-state" class="empty-state">
-          <svg width="120" height="120" fill="none" viewBox="0 0 120 120">
-            <rect width="120" height="120" rx="24" fill="#C4D4D4" fill-opacity="0.15"/>
-            <path d="M40 50v20a10 10 0 0 0 20 0V60h10v10a10 10 0 1 0 20 0V50a10 10 0 1 0-20 0v10H60V50a10 10 0 0 0-20 0z" fill="#6B8A8A"/>
-            <circle cx="60" cy="60" r="34" stroke="#6B8A8A" stroke-width="2"/>
+          <!-- Novo ícone profissional -->
+          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+            <rect width="100" height="100" rx="20" fill="#E0E7EF"/>
+            <g>
+              <rect x="28" y="34" width="44" height="32" rx="8" fill="#fff" stroke="#6B8A8A" stroke-width="2"/>
+              <path d="M50 60V48" stroke="#24a6a6" stroke-width="2" stroke-linecap="round"/>
+              <circle cx="50" cy="64" r="2.8" fill="#24a6a6"/>
+              <rect x="45" y="50" width="10" height="4" rx="1.5" fill="#24a6a6" opacity="0.16"/>
+            </g>
           </svg>
           <div class="empty-text">Adicione sua primeira cifra</div>
         </div>
@@ -35,19 +46,22 @@
         <button id="delete-selected-btn" title="Excluir selecionadas"><span>&#128465;</span></button>
       </div>
     </main>
-    <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra">+</button>
-    <div id="fab-menu" class="fab-menu hidden">
-      <button id="fab-local" class="fab-menu-item">Buscar no celular</button>
-      <button id="fab-cloud" class="fab-menu-item">Buscar na Nuvem</button>
-    </div>
+    <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra">
+      <svg width="32" height="32" viewBox="0 0 32 32" class="icon-folder"><path d="M4 7a2 2 0 0 1 2-2h5.5a2 2 0 0 1 1.6.8l2.1 2.8H26a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z" fill="#fff" stroke="#ff6d39" stroke-width="2"/><path d="M12 15h8M12 19h5" stroke="#ff6d39" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="fab-label">Buscar</span>
+    </button>
     <input id="file-input" type="file" class="hidden" accept="image/*" multiple />
-    <!-- Modal para seleção na nuvem -->
-    <div id="cloud-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <!-- Modal para adicionar nova aba -->
+    <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-content">
-        <button id="close-cloud-modal" class="close-modal" aria-label="Fechar">&times;</button>
-        <h2>Cifras na Nuvem</h2>
-        <div id="cloud-list" class="cloud-list"></div>
-        <button id="add-cloud-btn" class="add-btn">Adicionar Selecionadas</button>
+        <button id="close-add-tab-modal" class="close-modal" aria-label="Fechar">&times;</button>
+        <h2>Nova Aba</h2>
+        <input id="add-tab-name" type="text" placeholder="Nome da nova aba" />
+        <div>
+          <label><input type="radio" name="tab-privacy" value="public" checked> Visível para todos</label>
+          <label><input type="radio" name="tab-privacy" value="local"> Apenas neste dispositivo</label>
+        </div>
+        <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
       </div>
     </div>
     <!-- Modal para modo da aba -->
@@ -60,19 +74,6 @@
           <label><input type="radio" name="tab-mode" value="offline"> Offline</label>
         </form>
         <button id="save-tab-mode-btn" class="add-btn">Salvar</button>
-      </div>
-    </div>
-    <!-- Modal para adicionar nova aba -->
-    <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
-      <div class="modal-content">
-        <button id="close-add-tab-modal" class="close-modal" aria-label="Fechar">&times;</button>
-        <h2>Nova Aba</h2>
-        <input id="add-tab-name" type="text" placeholder="Nome da nova aba" />
-        <div>
-          <label><input type="radio" name="tab-privacy" value="public" checked> Visível para todos</label>
-          <label><input type="radio" name="tab-privacy" value="local"> Apenas neste dispositivo</label>
-        </div>
-        <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
       </div>
     </div>
     <div id="fullscreen-overlay" class="fullscreen-overlay hidden"></div>
