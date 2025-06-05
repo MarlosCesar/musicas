@@ -145,9 +145,12 @@ function renderCifras() {
       img.src = cifra.url;
       img.alt = cifra.title;
       img.onclick = e => { openFullscreen(cifra.url); e.stopPropagation(); };
+
+      // Corrija aqui:
       const title = document.createElement("div");
       title.className = "cifra-title";
-      title.textContent = cifra.title;
+      title.textContent = stripExtension(cifra.title);
+
       li.appendChild(img);
       li.appendChild(title);
       list.appendChild(li);
