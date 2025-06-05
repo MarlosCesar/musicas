@@ -45,7 +45,7 @@ function setTab(tabName) {
   renderCifras();
   updateFloatControls();
 }
-function addTab(name, privacy="public", mode="offline") {
+function addTab(name, privacy = "public", mode = "offline") {
   if (state.tabs.some(t => t.name === name)) return false;
   state.tabs.push({ name, type: "custom", privacy, mode });
   state.cifras[name] = [];
@@ -73,6 +73,7 @@ function clearSelection(tab) {
   updateFloatControls();
 }
 
+// Clique na logo recarrega a página mantendo as cifras
 document.addEventListener("DOMContentLoaded", () => {
   const logo = document.querySelector(".logo");
   if (logo) {
@@ -91,7 +92,7 @@ function renderTabs() {
     const btn = document.createElement("button");
     btn.className = `tab${isSelected ? " active" : ""} ${tab.mode || "offline"}${tab.type === "custom" ? " custom" : ""}`;
 
-    // X vermelho à esquerda (sempre presente nas custom, visível se ativa ou hover)
+    // Botão X vermelho nas abas customizadas, à esquerda
     if (tab.type === "custom") {
       const close = document.createElement("button");
       close.className = "tab-close";
@@ -195,7 +196,7 @@ function renderCifras() {
       img.className = "cifra-img";
       img.src = cifra.url;
       img.alt = stripExtension(cifra.title);
-      img.onclick = e => { openFullscreen(cifra.fullUrl || cifra.url, stripExtension(cifra.title)); e.stopPropagation(); };
+      img.onclick = e => { openFullscreen(cifra.fullUrl || cifra.url, stripExtension(cifra.title), cifra.isImage !== false); e.stopPropagation(); };
       img.onerror = function() {
         img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
       };
@@ -231,7 +232,7 @@ document.getElementById("file-input").onchange = async (e) => {
     if (!file.type.startsWith("image/")) continue;
     const url = URL.createObjectURL(file);
     const id = Math.random().toString(36).slice(2) + Date.now();
-    state.cifras[tab].push({ id, url, title: file.name, fullUrl: url });
+    state.cifras[tab].push({ id, url, title: file.name, fullUrl: url, isImage: true });
   }
   saveState();
   renderCifras();
@@ -262,6 +263,7 @@ document.getElementById("delete-selected-btn").onclick = () => {
   toast("Cifra(s) excluída(s).");
 };
 
+// Search bar + dropdown (busca Drive)
 const searchBar = document.getElementById("search-bar");
 const searchDropdown = document.getElementById("search-dropdown");
 let searchResults = [];
@@ -312,26 +314,26 @@ function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
   if (state.cifras[tab].some(c => c.id === file.id)) return;
-  let fullUrl = "";
-  let thumbUrl = file.thumbnailLink || file.iconLink;
-  if (file.mimeType && file.mimeType.startsWith("image/")) {
-    fullUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
-    thumbUrl = file.thumbnailLink || fullUrl;
-  } else {
-    fullUrl = `https://drive.google.com/file/d/${file.id}/view?usp=sharing`;
-    thumbUrl = file.iconLink || fullUrl;
-  }
+  let isImage = file.mimeType && file.mimeType.startsWith("image/");
+  let fullUrl = isImage
+    ? `https://drive.google.com/uc?export=view&id=${file.id}`
+    : `https://drive.google.com/file/d/${file.id}/view?usp=sharing`;
+  let thumbUrl = isImage
+    ? (file.thumbnailLink || fullUrl)
+    : (file.iconLink || fullUrl);
   state.cifras[tab].push({
     id: file.id,
     title: file.name,
     url: thumbUrl,
-    fullUrl: fullUrl
+    fullUrl: fullUrl,
+    isImage: isImage
   });
   saveState();
   renderCifras();
   toast(`Cifra "${stripExtension(file.name)}" adicionada!`);
 }
 
+// Modal: nova aba
 function showAddTabModal() {
   const modal = document.getElementById("add-tab-modal");
   modal.classList.remove("hidden");
@@ -346,6 +348,7 @@ function showAddTabModal() {
   };
   document.getElementById("close-add-tab-modal").onclick = () => modal.classList.add("hidden");
 }
+// Modal: modo da aba
 function showTabModeModal(tab) {
   const modal = document.getElementById("tab-mode-modal");
   modal.classList.remove("hidden");
@@ -360,21 +363,24 @@ function showTabModeModal(tab) {
 }
 
 // Fullscreen garantido para ocupar 100% da tela, centralizado, sem distorção
-function openFullscreen(url, title) {
+function openFullscreen(url, title, isImage = true) {
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper">
-      <img class="fullscreen-img" src="${url}" alt="${title || 'Cifra'}" />
+      ${isImage ? `<img class="fullscreen-img" src="${url}" alt="${title || 'Cifra'}" />`
+                : `<iframe src="${url}" class="fullscreen-iframe"></iframe>`}
     </div>
   `;
   overlay.classList.remove("hidden");
   overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
-  const img = overlay.querySelector(".fullscreen-img");
-  img.onerror = function() {
-    img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
-  };
+  if(isImage){
+    const img = overlay.querySelector(".fullscreen-img");
+    img.onerror = function() {
+      img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
+    };
+  }
 }
 
 function isSelected(id) {
