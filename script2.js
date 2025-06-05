@@ -323,7 +323,7 @@ async function openCameraCapture() {
   `;
 
   overlay.innerHTML = `
-    <video id="camera-video" autoplay playsinline style="max-width:90vw; max-height:70vh; border-radius:10px; background:#222"></video>
+    <video id="camera-video" autoplay playsinline style="width:100vw; height:100vh; object-fit:cover; background:#222"></video>
     <div style="margin:1em 0">
       <button id="camera-capture-btn" style="font-size:1.2em;">📸 Capturar Foto</button>
       <button id="camera-cancel-btn" style="font-size:1.2em; margin-left:1em;">Cancelar</button>
