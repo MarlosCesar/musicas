@@ -53,6 +53,72 @@ body {
   flex: 1;
   max-width: 100%;
 }
+
+.fab {
+  position: fixed;
+  bottom: 32px;
+  right: 32px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 64px;
+  height: 64px;
+  font-size: 2.4rem;
+  box-shadow: 0 2px 16px rgba(255,109,57,0.27);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  cursor: pointer;
+  transition: background 0.18s;
+}
+.fab:hover { background: var(--accent-hover);}
+.fab-menu {
+  position: fixed;
+  bottom: 110px;
+  right: 36px;
+  background: var(--white);
+  box-shadow: var(--shadow);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  z-index: 1002;
+  min-width: 140px;
+}
+.fab-menu.hidden { display: none; }
+.fab-menu-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 1.1rem;
+  padding: 10px 0;
+  text-align: left;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.fab-menu-btn:hover { background: var(--primary-xlight);}
+.fab-menu-btn i {
+  font-size: 1.3rem;
+}
+@media (max-width: 700px) {
+  .fab { width: 50px; height: 50px; font-size: 1.7rem; bottom: 14px; right: 14px;}
+  .fab-menu { right: 18px; bottom: 70px; min-width: 120px; }
+}
+/* Modal camera */
+#camera-video {
+  width: 100%;
+  max-width: 450px;
+  border-radius: 12px;
+  background: #222;
+}
+
 /* Campo de busca */
 .search-bar {
   background: var(--primary-xlight);
