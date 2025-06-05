@@ -23,6 +23,8 @@
       </div>
     </header>
     <nav id="tabs" class="tabs-container" role="tablist"></nav>
+    <div id="tab-scroll-left" class="tab-arrow left">&#8592;</div>
+    <div id="tab-scroll-right" class="tab-arrow right">&#8594;</div>
     <main>
       <section id="cifra-list-section" class="cifra-list-section">
         <div id="empty-state" class="empty-state">
@@ -35,17 +37,20 @@
         </div>
         <ul id="cifra-list" class="cifra-list"></ul>
       </section>
-      <div id="float-controls" class="float-controls hidden"></div>
+      <div id="float-controls" class="float-controls hidden">
+        <button id="select-all-btn" title="Selecionar todas"><span>&#9745;</span></button>
+        <button id="clear-selection-btn" title="Limpar seleção"><span>&#10006;</span></button>
+        <button id="delete-selected-btn" title="Excluir selecionadas"><span>&#128465;</span></button>
+        <button id="rename-selected-btn" title="Renomear selecionada" class="hidden"><span>&#9998;</span></button>
+        <button id="upload-selected-btn" title="Upload para Drive" class="hidden"><span>&#11014;</span></button>
+      </div>
     </main>
-
-    <!-- FAB e menu suspenso melhorados -->
     <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra">+</button>
     <div id="fab-menu" class="fab-menu hidden">
       <button id="fab-buscar" class="fab-menu-btn">🔍 Buscar</button>
       <button id="fab-camera" class="fab-menu-btn">📷 Tirar foto</button>
       <button id="fab-upload" class="fab-menu-btn">⬆️ Upload</button>
     </div>
-
     <input id="file-input" type="file" class="hidden" accept="image/*" multiple />
     <!-- Modal para seleção na nuvem -->
     <div id="cloud-modal" class="modal hidden" role="dialog" aria-modal="true">
