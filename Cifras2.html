@@ -17,7 +17,7 @@
       <div class="header-content">
         <div class="logo">Cifras</div>
         <div class="search-wrap">
-          <input id="search-bar" class="search-bar" type="search" placeholder="Search" autocomplete="off" />
+          <input id="search-bar" class="search-bar" type="search" placeholder="Buscar música ou cifra..." autocomplete="off" />
           <ul id="search-dropdown" class="search-dropdown hidden"></ul>
         </div>
       </div>
@@ -26,44 +26,34 @@
     <main>
       <section id="cifra-list-section" class="cifra-list-section">
         <div id="empty-state" class="empty-state">
-          <!-- Novo ícone profissional -->
-          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
-            <rect width="100" height="100" rx="20" fill="#E0E7EF"/>
-            <g>
-              <rect x="28" y="34" width="44" height="32" rx="8" fill="#fff" stroke="#6B8A8A" stroke-width="2"/>
-              <path d="M50 60V48" stroke="#24a6a6" stroke-width="2" stroke-linecap="round"/>
-              <circle cx="50" cy="64" r="2.8" fill="#24a6a6"/>
-              <rect x="45" y="50" width="10" height="4" rx="1.5" fill="#24a6a6" opacity="0.16"/>
-            </g>
+          <svg width="120" height="120" fill="none" viewBox="0 0 120 120">
+            <rect width="120" height="120" rx="24" fill="#C4D4D4" fill-opacity="0.15"/>
+            <path d="M40 50v20a10 10 0 0 0 20 0V60h10v10a10 10 0 1 0 20 0V50a10 10 0 1 0-20 0v10H60V50a10 10 0 0 0-20 0z" fill="#6B8A8A"/>
+            <circle cx="60" cy="60" r="34" stroke="#6B8A8A" stroke-width="2"/>
           </svg>
           <div class="empty-text">Adicione sua primeira cifra</div>
         </div>
         <ul id="cifra-list" class="cifra-list"></ul>
       </section>
-      <div id="float-controls" class="float-controls hidden">
-        <button id="select-all-btn" title="Selecionar todas"><span>&#9745;</span></button>
-        <button id="clear-selection-btn" title="Limpar seleção"><span>&#10006;</span></button>
-        <button id="delete-selected-btn" title="Excluir selecionadas"><span>&#128465;</span></button>
-      </div>
+      <div id="float-controls" class="float-controls hidden"></div>
     </main>
-    <button id="fab">+</button>
-<div id="fab-menu" class="fab-menu hidden">
-  <button id="fab-buscar" class="fab-menu-btn"><i class="icon-search"></i>Buscar</button>
-  <button id="fab-camera" class="fab-menu-btn"><i class="icon-camera"></i>Tirar foto</button>
-  <button id="fab-upload" class="fab-menu-btn"><i class="icon-upload"></i>Upload</button>
-</div>
+
+    <!-- FAB e menu suspenso melhorados -->
+    <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra">+</button>
+    <div id="fab-menu" class="fab-menu hidden">
+      <button id="fab-buscar" class="fab-menu-btn">🔍 Buscar</button>
+      <button id="fab-camera" class="fab-menu-btn">📷 Tirar foto</button>
+      <button id="fab-upload" class="fab-menu-btn">⬆️ Upload</button>
+    </div>
+
     <input id="file-input" type="file" class="hidden" accept="image/*" multiple />
-    <!-- Modal para adicionar nova aba -->
-    <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
+    <!-- Modal para seleção na nuvem -->
+    <div id="cloud-modal" class="modal hidden" role="dialog" aria-modal="true">
       <div class="modal-content">
-        <button id="close-add-tab-modal" class="close-modal" aria-label="Fechar">&times;</button>
-        <h2>Nova Aba</h2>
-        <input id="add-tab-name" type="text" placeholder="Nome da nova aba" />
-        <div>
-          <label><input type="radio" name="tab-privacy" value="public" checked> Visível para todos</label>
-          <label><input type="radio" name="tab-privacy" value="local"> Apenas neste dispositivo</label>
-        </div>
-        <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
+        <button id="close-cloud-modal" class="close-modal" aria-label="Fechar">&times;</button>
+        <h2>Cifras na Nuvem</h2>
+        <div id="cloud-list" class="cloud-list"></div>
+        <button id="add-cloud-btn" class="add-btn">Adicionar Selecionadas</button>
       </div>
     </div>
     <!-- Modal para modo da aba -->
@@ -76,6 +66,19 @@
           <label><input type="radio" name="tab-mode" value="offline"> Offline</label>
         </form>
         <button id="save-tab-mode-btn" class="add-btn">Salvar</button>
+      </div>
+    </div>
+    <!-- Modal para adicionar nova aba -->
+    <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
+      <div class="modal-content">
+        <button id="close-add-tab-modal" class="close-modal" aria-label="Fechar">&times;</button>
+        <h2>Nova Aba</h2>
+        <input id="add-tab-name" type="text" placeholder="Nome da nova aba" />
+        <div>
+          <label><input type="radio" name="tab-privacy" value="public" checked> Visível para todos</label>
+          <label><input type="radio" name="tab-privacy" value="local"> Apenas neste dispositivo</label>
+        </div>
+        <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
       </div>
     </div>
     <div id="fullscreen-overlay" class="fullscreen-overlay hidden"></div>
