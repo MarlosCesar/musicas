@@ -24,6 +24,7 @@ body {
   min-height: 100vh;
 }
 .app-container { min-height: 100vh; display: flex; flex-direction: column; }
+/* Header e search */
 .header {
   background: var(--primary);
   padding: 16px 0 10px 0;
@@ -51,48 +52,61 @@ body {
 .search-wrap {
   position: relative;
   flex: 1;
+  max-width: 100%;
 }
+/* Campo de busca */
 .search-bar {
   background: var(--primary-xlight);
   border: none;
   border-radius: var(--radius);
   padding: 12px 20px 12px 44px;
-  width: 95%;
+  width: 100%;
   font-size: 1.12rem;
   color: var(--primary);
   outline: none;
+  box-sizing: border-box;
+  margin-bottom: 6px;
   background-image: url('data:image/svg+xml;utf8,<svg width="22" height="22" fill="none" stroke="%231a202c" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="7"/><path d="M20 20l-4.35-4.35"/></svg>');
   background-repeat: no-repeat;
   background-position: 12px center;
-  margin-bottom: 6px;
 }
+
+/* Dropdown igual ao campo, arredondado e responsivo */
 .search-dropdown {
   position: absolute;
   left: 0;
-  top: 44px;
+  top: 100%;
   width: 100%;
+  min-width: 180px;
   background: var(--white);
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 var(--radius) var(--radius);
   box-shadow: 0 8px 32px rgba(0,0,0,0.08);
   z-index: 33;
   list-style: none;
-  margin: 0; padding: 0;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   font-size: 1rem;
   max-height: 270px;
   overflow-y: auto;
+  transition: width 0.2s;
 }
 .search-dropdown li {
   padding: 10px 22px;
   cursor: pointer;
   transition: background 0.13s;
+  border-bottom: 1px solid #f1f1f1;
+}
+.search-dropdown li:last-child {
+  border-bottom: none;
 }
 .search-dropdown li:hover, .search-dropdown li.active {
   background: var(--primary-xlight);
 }
 .search-dropdown.hidden { display: none; }
 
+/* Tabs e outros estilos permanecem iguais */
 .tabs-container {
   display: flex;
   align-items: flex-end;
@@ -420,6 +434,12 @@ body {
     max-height: 100vh;
     width: auto;
     height: auto;
+  }
+  .search-bar, .search-dropdown {
+    font-size: 1rem;
+    min-width: 100px;
+    width: 100%;
+    max-width: 100vw;
   }
 }
 .hidden { display: none !important; }
