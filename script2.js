@@ -29,7 +29,6 @@ function stripExtension(filename) {
 
 // --- State Management ---
 function saveState() {
-  // Converte todos os Sets para arrays antes de salvar
   const selectionToSave = {};
   for (const tab in state.selection) {
     selectionToSave[tab] = Array.from(state.selection[tab] || []);
@@ -41,6 +40,7 @@ function saveState() {
     currentTab: state.currentTab
   }));
 }
+
 function loadState() {
   const s = localStorage.getItem(LOCALSTORE_KEY);
   if (s) {
@@ -49,7 +49,6 @@ function loadState() {
     state.cifras = loaded.cifras || {};
     state.selection = {};
     if (loaded.selection) {
-      // Corrige cada tab para ser Set
       for (const tab in loaded.selection) {
         state.selection[tab] = new Set(Array.isArray(loaded.selection[tab]) 
           ? loaded.selection[tab] 
@@ -59,12 +58,14 @@ function loadState() {
     state.currentTab = loaded.currentTab || "Domingo Manhã";
   }
 }
+
 function setTab(tabName) {
   state.currentTab = tabName;
   renderTabs();
   renderCifras();
   updateFloatControls();
 }
+
 function addTab(name, privacy="public", mode="offline") {
   if (state.tabs.some(t => t.name === name)) return false;
   state.tabs.push({ name, type: "custom", privacy, mode });
@@ -72,15 +73,18 @@ function addTab(name, privacy="public", mode="offline") {
   saveState(); renderTabs(); setTab(name);
   return true;
 }
+
 function setTabMode(tabName, mode) {
   const tab = state.tabs.find(t => t.name === tabName);
   if (tab) { tab.mode = mode; saveState(); renderTabs(); renderCifras(); }
 }
+
 function removeCifras(tab, ids) {
   state.cifras[tab] = (state.cifras[tab] || []).filter(cifra => !ids.includes(cifra.id));
   state.selection[tab] = new Set();
   saveState(); renderCifras(); updateFloatControls();
 }
+
 function clearSelection(tab) {
   state.selection[tab] = new Set();
   updateFloatControls();
@@ -111,6 +115,7 @@ function renderTabs() {
   tabsElem.appendChild(addBtn);
   handleTabScrollArrows();
 }
+
 function renderCifras() {
   const list = document.getElementById("cifra-list");
   const empty = document.getElementById("empty-state");
@@ -140,13 +145,20 @@ function renderCifras() {
         renderCifras();
         e.stopPropagation();
       };
+
       const img = document.createElement("img");
       img.className = "cifra-img";
-      img.src = cifra.url;
+      
+      // Corrige a URL para imagens do Drive
+      if (cifra.driveId) {
+        img.src = `https://drive.google.com/thumbnail?id=${cifra.driveId}&sz=w200`;
+      } else {
+        img.src = cifra.url;
+      }
+      
       img.alt = cifra.title;
-      img.onclick = e => { openFullscreen(cifra.url); e.stopPropagation(); };
+      img.onclick = e => { openFullscreen(cifra); e.stopPropagation(); };
 
-      // Corrija aqui:
       const title = document.createElement("div");
       title.className = "cifra-title";
       title.textContent = stripExtension(cifra.title);
@@ -157,17 +169,15 @@ function renderCifras() {
     });
   }
 }
+
 function updateFloatControls() {
   const float = document.getElementById("float-controls");
   const tab = state.currentTab;
   const selected = (state.selection[tab] && state.selection[tab].size) ? Array.from(state.selection[tab]) : [];
-  // Sempre manter Selecionar todas, Limpar, Excluir
   document.getElementById("select-all-btn").classList.remove("hidden");
   document.getElementById("clear-selection-btn").classList.remove("hidden");
   document.getElementById("delete-selected-btn").classList.remove("hidden");
-  // Renomear só se 1 selecionada
   document.getElementById("rename-selected-btn").classList.toggle("hidden", selected.length !== 1);
-  // Upload só se >=1 selecionada
   document.getElementById("upload-selected-btn").classList.toggle("hidden", selected.length === 0);
   if (selected.length === 0) {
     float.classList.add("hidden");
@@ -189,10 +199,12 @@ document.getElementById("select-all-btn").onclick = () => {
   updateFloatControls();
   renderCifras();
 };
+
 document.getElementById("clear-selection-btn").onclick = () => {
   clearSelection(state.currentTab);
   renderCifras();
 };
+
 document.getElementById("delete-selected-btn").onclick = () => {
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
@@ -200,11 +212,13 @@ document.getElementById("delete-selected-btn").onclick = () => {
   renderCifras();
   toast("Cifra(s) excluída(s).");
 };
+
 document.getElementById("rename-selected-btn").onclick = () => {
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
   if (selected.length === 1) showRenameModal(selected[0]);
 };
+
 document.getElementById("upload-selected-btn").onclick = async () => {
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
@@ -256,17 +270,15 @@ function showRenameModal(cifraId) {
 document.getElementById("fab").onclick = () => {
   document.getElementById("fab-menu").classList.toggle("hidden");
 };
+
 document.getElementById("fab-buscar").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
+  document.getElementById("fab-menu").classlist.add("hidden");
   document.getElementById("file-input").click();
 };
+
 document.getElementById("fab-camera").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("fab-camera").onclick = openCameraCapture;
-};
-document.getElementById("fab-upload").onclick = () => {
-  document.getElementById("fab-menu").classList.add("hidden");
-  document.getElementById("file-input").click();
 };
 
 document.getElementById("fab-upload").onclick = async () => {
@@ -300,9 +312,8 @@ document.getElementById("file-input").onchange = async (e) => {
   toast(`${files.length} cifra(s) adicionada(s)!`);
 };
 
-// --- Camera Capture (mantém sua implementação atual se já existir) ---
+// --- Camera Capture ---
 async function openCameraCapture() {
-  // Cria o elemento overlay de captura
   let overlay = document.getElementById("camera-capture-overlay");
   if (overlay) overlay.remove();
   overlay = document.createElement("div");
@@ -311,7 +322,6 @@ async function openCameraCapture() {
     z-index: 99999; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center;
   `;
 
-  // Elementos da interface
   overlay.innerHTML = `
     <video id="camera-video" autoplay playsinline style="max-width:90vw; max-height:70vh; border-radius:10px; background:#222"></video>
     <div style="margin:1em 0">
@@ -341,19 +351,16 @@ async function openCameraCapture() {
   };
 
   captureBtn.onclick = () => {
-    // Captura o frame do vídeo
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Converte para blob e adiciona à lista
     canvas.toBlob(blob => {
       if (stream) stream.getTracks().forEach(track => track.stop());
       overlay.remove();
 
-      // Gera URL para exibição e objeto cifra
       const url = URL.createObjectURL(blob);
       const now = new Date();
       const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}.${now.getSeconds().toString().padStart(2,"0")}.jpg`;
@@ -381,7 +388,6 @@ document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
   renderCifras();
-  // Dropdown de sugestões de busca
   const dropdown = document.getElementById("search-dropdown");
   if (val.length === 0) {
     dropdown.classList.add("hidden");
@@ -409,22 +415,29 @@ document.getElementById("search-bar").oninput = async (e) => {
     dropdown.appendChild(li);
   });
 };
+
 document.getElementById("search-bar").onfocus = () => {
   if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
 };
+
 document.getElementById("search-bar").onblur = () => setTimeout(() => {
   document.getElementById("search-dropdown").classList.add("hidden");
 }, 200);
 
-// --- Adicionar cifra da nuvem ao clicar na sugestão ---
+// --- Adicionar cifra da nuvem ---
 function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
   if (state.cifras[tab].some(c => c.id === file.id)) return;
+  
+  // URL corrigida para imagens do Drive
+  const driveUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w1000`;
+  
   state.cifras[tab].push({
     id: file.id,
     title: file.name,
-    url: `https://drive.google.com/uc?export=view&id=${file.id}`
+    url: driveUrl,
+    driveId: file.id // Armazena o ID do Drive para referência
   });
   saveState();
   renderCifras();
@@ -442,18 +455,29 @@ async function searchDrive(query) {
 }
 
 // --- Fullscreen ---
-function openFullscreen(url) {
+function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
+  
+  // Determina a URL correta baseada na origem da imagem
+  let fullscreenUrl;
+  if (cifra.driveId) {
+    // Se for do Drive, usa a URL de visualização direta
+    fullscreenUrl = `https://drive.google.com/uc?export=view&id=${cifra.driveId}`;
+  } else {
+    // Se for local, usa a URL normal
+    fullscreenUrl = cifra.url;
+  }
+  
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper">
-      <img class="fullscreen-img" src="${url}" alt="Cifra" />
+      <img class="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
     </div>`;
   overlay.classList.remove("hidden");
   overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
 }
 
-// --- Upload para Google Drive (mantém sua integração atual) ---
+// --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
   // Implemente aqui sua integração OAuth2 real Google Drive!
   alert("Upload real para o Google Drive precisa ser implementado com OAuth2!");
@@ -564,7 +588,7 @@ function showCloudModal(files=[]) {
     cb.type = "checkbox";
     cb.value = f.id;
     const img = document.createElement("img");
-    img.src = f.thumbnailLink || f.iconLink;
+    img.src = `https://drive.google.com/thumbnail?id=${f.id}&sz=w200`;
     img.width = 40; img.height = 56; img.alt = f.name;
     const span = document.createElement("span");
     span.textContent = f.name;
@@ -579,7 +603,8 @@ function showCloudModal(files=[]) {
       state.cifras[tab].push({
         id: f.id,
         title: f.name,
-        url: `https://drive.google.com/uc?export=view&id=${f.id}`
+        url: `https://drive.google.com/thumbnail?id=${f.id}&sz=w1000`,
+        driveId: f.id
       });
     });
     saveState();
@@ -588,20 +613,6 @@ function showCloudModal(files=[]) {
     toast(`${selected.length} cifra(s) adicionada(s) da nuvem!`);
   };
   document.getElementById("close-cloud-modal").onclick = () => modal.classList.add("hidden");
-}
-
-// --- Selection helpers ---
-function isSelected(id) {
-  const tab = state.currentTab;
-  return state.selection[tab] && state.selection[tab].has(id);
-}
-
-// --- Toast ---
-function toast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 2000);
 }
 
 // --- Polling for online tabs ---
