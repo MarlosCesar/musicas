@@ -46,6 +46,8 @@ body {
   letter-spacing: 1px;
   margin-right: 22px;
   margin-bottom: 10px;
+  cursor: pointer;
+  user-select: none;
 }
 .search-wrap {
   position: relative;
@@ -117,6 +119,9 @@ body {
   outline: none;
   position: relative;
   margin-right: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .tab.active {
   color: var(--tab-online);
@@ -136,25 +141,34 @@ body {
   cursor: pointer;
   opacity: 0.5;
   transition: opacity 0.13s;
+  z-index: 5;
 }
 .tab .tab-more:hover { opacity: 1; }
 .tab .tab-close {
   display: none;
   position: absolute;
+  left: 6px;
   top: 7px;
-  right: 7px;
   background: none;
   border: none;
   color: var(--danger);
   font-size: 1.25rem;
   cursor: pointer;
-  z-index: 5;
+  z-index: 10;
+  padding: 0 2px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
 }
-.tab.custom:focus .tab-close,
-.tab.custom:hover .tab-close,
+.tab.custom.active .tab-close,
 .tab.custom.show-x .tab-close {
   display: block;
 }
+.tab.custom:not(.active):hover .tab-close,
+.tab.custom:not(.active).show-x .tab-close {
+  display: block;
+}
+.tab .tab-close:active { opacity: 1; }
+
 .tab-add {
   background: var(--accent);
   color: #fff;
@@ -243,11 +257,15 @@ body {
   flex-direction: column;
 }
 .fullscreen-overlay .fullscreen-img {
-  max-width: 95vw;
-  max-height: 88vh;
-  border-radius: 16px;
-  box-shadow: 0 2px 32px rgba(0,0,0,0.31);
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  object-fit: contain;
+  border-radius: 0;
   background: #fff;
+  display: block;
+  margin: 0 auto;
 }
 .fullscreen-overlay .close-fullscreen {
   position: absolute;
@@ -259,6 +277,7 @@ body {
   border: none;
   cursor: pointer;
   opacity: 0.8;
+  z-index: 10001;
 }
 .fab {
   position: fixed;
@@ -389,5 +408,12 @@ body {
   .fab-label { font-size: 0.93rem; }
   .float-controls { padding: 8px 12px; gap: 12px; }
   .modal-content { padding: 18px 10px 18px 10px;}
+  .fullscreen-overlay .fullscreen-img {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    object-fit: contain;
+  }
 }
 .hidden { display: none !important; }
