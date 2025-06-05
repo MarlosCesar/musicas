@@ -262,7 +262,7 @@ document.getElementById("fab-buscar").onclick = () => {
 };
 document.getElementById("fab-camera").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
-  openCameraCapture();
+  document.getElementById("fab-camera").onclick = openCameraCapture;
 };
 document.getElementById("fab-upload").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
@@ -301,9 +301,79 @@ document.getElementById("file-input").onchange = async (e) => {
 };
 
 // --- Camera Capture (mantém sua implementação atual se já existir) ---
-function openCameraCapture() {
-  // Implemente se desejar captura via webcam
-  alert("Funcionalidade de câmera não implementada neste script.");
+async function openCameraCapture() {
+  // Cria o elemento overlay de captura
+  let overlay = document.getElementById("camera-capture-overlay");
+  if (overlay) overlay.remove();
+  overlay = document.createElement("div");
+  overlay.id = "camera-capture-overlay";
+  overlay.style.cssText = `
+    z-index: 99999; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center;
+  `;
+
+  // Elementos da interface
+  overlay.innerHTML = `
+    <video id="camera-video" autoplay playsinline style="max-width:90vw; max-height:70vh; border-radius:10px; background:#222"></video>
+    <div style="margin:1em 0">
+      <button id="camera-capture-btn" style="font-size:1.2em;">📸 Capturar Foto</button>
+      <button id="camera-cancel-btn" style="font-size:1.2em; margin-left:1em;">Cancelar</button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  const video = overlay.querySelector("#camera-video");
+  const captureBtn = overlay.querySelector("#camera-capture-btn");
+  const cancelBtn = overlay.querySelector("#camera-cancel-btn");
+
+  let stream = null;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
+  } catch (e) {
+    overlay.remove();
+    alert("Não foi possível acessar a câmera.");
+    return;
+  }
+
+  cancelBtn.onclick = () => {
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    overlay.remove();
+  };
+
+  captureBtn.onclick = () => {
+    // Captura o frame do vídeo
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Converte para blob e adiciona à lista
+    canvas.toBlob(blob => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      overlay.remove();
+
+      // Gera URL para exibição e objeto cifra
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}.${now.getSeconds().toString().padStart(2,"0")}.jpg`;
+      const id = "foto-" + now.getTime();
+
+      const tab = state.currentTab;
+      if (!state.cifras[tab]) state.cifras[tab] = [];
+      state.cifras[tab].push({
+        id,
+        title,
+        url,
+        createdAt: now.toISOString()
+      });
+      if (!state.selection[tab]) state.selection[tab] = new Set();
+      state.selection[tab].add(id);
+
+      saveState();
+      renderCifras();
+    }, "image/jpeg", 0.92);
+  };
 }
 
 // --- Search bar e dropdown de busca ---
