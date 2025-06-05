@@ -269,10 +269,19 @@ document.getElementById("fab-upload").onclick = () => {
   document.getElementById("file-input").click();
 };
 
-document.body.onclick = e => {
-  if (!e.target.closest('.fab') && !e.target.closest('.fab-menu')) {
-    document.getElementById("fab-menu").classList.add("hidden");
+document.getElementById("fab-upload").onclick = async () => {
+  document.getElementById("fab-menu").classList.add("hidden");
+  const tab = state.currentTab;
+  const selected = Array.from(state.selection[tab] || []);
+  if (!selected.length) {
+    toast("Selecione uma ou mais cifras para enviar ao Google Drive.");
+    return;
   }
+  for (const id of selected) {
+    const cifra = (state.cifras[tab] || []).find(c => c.id === id);
+    if (cifra) await uploadCifraToDrive(cifra);
+  }
+  toast("Upload realizado para o Google Drive!");
 };
 
 // --- File input upload ---
