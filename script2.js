@@ -6,18 +6,19 @@ const TABS_DEFAULT = [
   { name: "Quarta", type: "default", mode: "offline" },
   { name: "Santa Ceia", type: "default", mode: "offline" }
 ];
-const LOCALSTORE_KEY = "cifras2-app-state-v3";
+const LOCALSTORE_KEY = "cifras2-app-state-v4";
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
+const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
 
 let state = {
   tabs: [...TABS_DEFAULT],
   cifras: {},
   selection: {},
-  currentTab: "Domingo Manhã"
+  currentTab: "Domingo Manhã",
+  search: "",
 };
 
-// === Utilidades ===
 function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
@@ -144,8 +145,6 @@ function showAddTabModal() {
   };
   modal.querySelector("#close-add-tab-modal").onclick = () => document.body.removeChild(modal);
 }
-
-// === Modal para modo da aba (pode adaptar conforme seu design) ===
 function showTabModeModal(tab) {
   const modal = document.createElement("div");
   modal.className = "modal";
@@ -268,6 +267,56 @@ document.addEventListener("DOMContentLoaded", () => {
     renderFloatControls();
     toast(`${files.length} cifra(s) adicionada(s)!`);
   };
+
+  // === Dropdown de busca ===
+  const searchBar = document.getElementById("search-bar");
+  const searchDropdown = document.getElementById("search-dropdown");
+  let searchResults = [];
+  let searchTimeout = null;
+  if (searchBar && searchDropdown) {
+    searchBar.oninput = async (e) => {
+      const val = e.target.value.trim();
+      state.search = val;
+      if (searchTimeout) clearTimeout(searchTimeout);
+      if (val.length === 0) {
+        searchDropdown.classList.add("hidden");
+        searchResults = [];
+        renderCifras();
+        return;
+      }
+      searchDropdown.innerHTML = '<li style="color:#aaa;">Buscando cifras...</li>';
+      searchDropdown.classList.remove("hidden");
+      searchTimeout = setTimeout(async () => {
+        const files = await searchDrive(val);
+        searchResults = files;
+        if (!files.length) {
+          searchDropdown.innerHTML = '<li style="color:#aaa;">Nenhuma música encontrada</li>';
+          return;
+        }
+        searchDropdown.innerHTML = '';
+        files.forEach((f, idx) => {
+          const li = document.createElement("li");
+          li.textContent = stripExtension(f.name);
+          li.onclick = () => {
+            addCifraFromDrive(f);
+            searchDropdown.classList.add("hidden");
+            searchBar.value = "";
+            state.search = "";
+            renderCifras();
+          };
+          searchDropdown.appendChild(li);
+        });
+      }, 350);
+    };
+    searchBar.onfocus = () => {
+      if (searchResults.length) searchDropdown.classList.remove("hidden");
+    };
+    searchBar.onblur = () => setTimeout(() => searchDropdown.classList.add("hidden"), 180);
+  }
+  // === Inicialização ===
+  loadState();
+  renderTabs();
+  setTab(state.currentTab);
 });
 
 // === Camera Capture ===
@@ -431,41 +480,42 @@ function showUploadPrompt(cifras) {
   };
 }
 
-// === Upload para Google Drive com OAuth2 ===
+// === Upload para Google Drive (mock, veja instruções previas para OAuth2 real) ===
 async function uploadCifraToDrive(cifra) {
-  const access_token = window.GDRIVE_ACCESS_TOKEN || null;
-  if (!access_token) {
-    toast("Você precisa autenticar com o Google antes de fazer upload.");
-    requestGoogleAuth();
-    return;
-  }
-  const response = await fetch(cifra.fullUrl || cifra.url);
-  const blob = await response.blob();
-  const metadata = {
-    name: cifra.title + ".jpg",
-    parents: [GOOGLE_DRIVE_FOLDER_ID]
-  };
-  const form = new FormData();
-  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
-  form.append("file", blob);
-  await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
-    method: "POST",
-    headers: {
-      "Authorization": "Bearer " + access_token
-    },
-    body: form
-  });
+  toast("Upload só funciona com integração OAuth2 ativada.");
+  // Implemente OAuth2 para upload real.
 }
 
-// === OAuth2 Google Sign-In ===
-function requestGoogleAuth() {
-  // Use a popup Google OAuth2 flow
-  const redirect_uri = window.location.origin + window.location.pathname;
-  const scope = encodeURIComponent("https://www.googleapis.com/auth/drive.file");
-  const client_id = GOOGLE_CLIENT_ID;
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=token&scope=${scope}&prompt=consent`;
-  window.open(authUrl, "_blank", "width=500,height=650");
-  alert('Após autenticar, copie o access_token da URL e cole no console como: window.GDRIVE_ACCESS_TOKEN = "SEU_TOKEN_AQUI";');
+// === Busca Google Drive (para dropdown de busca) ===
+async function searchDrive(query) {
+  if (!query) return [];
+  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink,mimeType)&key=${GOOGLE_API_KEY}`;
+  const resp = await fetch(url);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.files || [];
+}
+function addCifraFromDrive(file) {
+  const tab = state.currentTab;
+  if (!state.cifras[tab]) state.cifras[tab] = [];
+  if (state.cifras[tab].some(c => c.id === file.id)) return;
+  let isImage = file.mimeType && file.mimeType.startsWith("image/");
+  let fullUrl = isImage
+    ? `https://drive.google.com/uc?export=view&id=${file.id}`
+    : `https://drive.google.com/file/d/${file.id}/view?usp=sharing`;
+  let thumbUrl = isImage
+    ? (file.thumbnailLink || fullUrl)
+    : (file.iconLink || fullUrl);
+  state.cifras[tab].push({
+    id: file.id,
+    title: file.name,
+    url: thumbUrl,
+    fullUrl: fullUrl,
+    isImage: isImage
+  });
+  saveState();
+  renderCifras();
+  toast(`Cifra "${stripExtension(file.name)}" adicionada!`);
 }
 
 // === Fullscreen ===
@@ -489,10 +539,3 @@ function openFullscreen(url, title, isImage = true) {
     };
   }
 }
-
-// === Inicialização ===
-window.onload = () => {
-  loadState();
-  renderTabs();
-  setTab(state.currentTab);
-};
