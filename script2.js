@@ -367,14 +367,6 @@ function openFullscreen(url) {
       <img class="fullscreen-img" src="" alt="Cifra" />
     </div>`;
   overlay.classList.remove("hidden");
-  const img = overlay.querySelector(".fullscreen-img");
-  fetch(url)
-    .then(r => r.blob())
-    .then(blob => {
-      const objectUrl = URL.createObjectURL(blob);
-      img.src = objectUrl;
-    })
-    .catch(() => { img.src = url; });
   overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
 }
