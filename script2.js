@@ -328,7 +328,7 @@ document.getElementById("search-bar").oninput = async (e) => {
   }
   files.forEach(f => {
     const li = document.createElement("li");
-    li.textContent = f.name;
+    li.textContent = stripExtension(f.name);
     li.onclick = () => {
       addCifraFromDrive(f);
       dropdown.classList.add("hidden");
