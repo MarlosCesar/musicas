@@ -7,7 +7,7 @@ const TABS_DEFAULT = [
 ];
 const LOCALSTORE_KEY = "cifras2-app-state-v2";
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
-const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
+const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com"; 
 
 let state = {
   tabs: [...TABS_DEFAULT],
@@ -43,7 +43,7 @@ function setTab(tabName) {
   state.currentTab = tabName;
   renderTabs();
   renderCifras();
-  updateFloatControls();
+  renderFloatControls();
 }
 function addTab(name, privacy = "public", mode = "offline") {
   if (state.tabs.some(t => t.name === name)) return false;
@@ -66,23 +66,23 @@ function setTabMode(tabName, mode) {
 function removeCifras(tab, ids) {
   state.cifras[tab] = (state.cifras[tab] || []).filter(cifra => !ids.includes(cifra.id));
   state.selection[tab] = new Set();
-  saveState(); renderCifras(); updateFloatControls();
+  saveState(); renderCifras(); renderFloatControls();
 }
 function clearSelection(tab) {
   state.selection[tab] = new Set();
-  updateFloatControls();
+  renderFloatControls();
 }
 
-// Clique na logo recarrega a página mantendo as cifras
+// Logo recarrega a página mantendo as cifras
 document.addEventListener("DOMContentLoaded", () => {
   const logo = document.querySelector(".logo");
   if (logo) {
     logo.style.cursor = "pointer";
-    logo.onclick = () => {
-      location.reload();
-    };
+    logo.onclick = () => location.reload();
   }
 });
+
+// Renderização das abas (igual ao anterior, omiti para foco no novo menu e upload)
 
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
@@ -115,7 +115,7 @@ function renderTabs() {
     tabLabel.onclick = () => setTab(tab.name);
     btn.appendChild(tabLabel);
 
-    // 3 pontos no lado direito (para todas as abas)
+    // 3 pontos no lado direito
     const more = document.createElement("span");
     more.className = "tab-more";
     more.innerHTML = "&#8942;";
@@ -129,34 +129,8 @@ function renderTabs() {
   addBtn.textContent = "+";
   addBtn.onclick = showAddTabModal;
   tabsElem.appendChild(addBtn);
-
-  // Scroll horizontal
-  let isDown = false, startX, scrollLeft;
-  tabsElem.onmousedown = e => { isDown = true; startX = e.pageX - tabsElem.offsetLeft; scrollLeft = tabsElem.scrollLeft; };
-  tabsElem.onmouseleave = () => isDown = false;
-  tabsElem.onmouseup = () => isDown = false;
-  tabsElem.onmousemove = e => {
-    if (!isDown) return;
-    e.preventDefault();
-    const x = e.pageX - tabsElem.offsetLeft;
-    tabsElem.scrollLeft = scrollLeft - (x - startX);
-  };
-  tabsElem.addEventListener('touchstart', e => {
-    isDown = true; startX = e.touches[0].pageX - tabsElem.offsetLeft; scrollLeft = tabsElem.scrollLeft;
-  });
-  tabsElem.addEventListener('touchend', () => isDown = false);
-  tabsElem.addEventListener('touchmove', e => {
-    if (!isDown) return;
-    const x = e.touches[0].pageX - tabsElem.offsetLeft;
-    tabsElem.scrollLeft = scrollLeft - (x - startX);
-  });
-  tabsElem.addEventListener('wheel', e => {
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      tabsElem.scrollLeft += e.deltaX;
-      e.preventDefault();
-    }
-  }, { passive: false });
 }
+
 function removeTab(tabName) {
   state.tabs = state.tabs.filter(t => t.name !== tabName);
   delete state.cifras[tabName];
@@ -164,6 +138,7 @@ function removeTab(tabName) {
   if (state.currentTab === tabName) state.currentTab = TABS_DEFAULT[0].name;
   saveState(); renderTabs(); setTab(state.currentTab);
 }
+
 function renderCifras() {
   const list = document.getElementById("cifra-list");
   const empty = document.getElementById("empty-state");
@@ -179,7 +154,6 @@ function renderCifras() {
     cifras.forEach(cifra => {
       const li = document.createElement("li");
       li.className = "cifra-container" + (isSelected(cifra.id) ? " selected" : "");
-      // Seleção
       li.onclick = e => {
         if (state.selection[tab] && state.selection[tab].has(cifra.id)) {
           state.selection[tab].delete(cifra.id);
@@ -187,11 +161,10 @@ function renderCifras() {
           if (!state.selection[tab]) state.selection[tab] = new Set();
           state.selection[tab].add(cifra.id);
         }
-        updateFloatControls();
+        renderFloatControls();
         renderCifras();
         e.stopPropagation();
       };
-      // Imagem
       const img = document.createElement("img");
       img.className = "cifra-img";
       img.src = cifra.url;
@@ -200,7 +173,6 @@ function renderCifras() {
       img.onerror = function() {
         img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
       };
-      // Nome
       const title = document.createElement("div");
       title.className = "cifra-title";
       title.textContent = stripExtension(cifra.title);
@@ -210,20 +182,29 @@ function renderCifras() {
     });
   }
 }
-function updateFloatControls() {
-  const float = document.getElementById("float-controls");
-  const tab = state.currentTab;
-  const selected = (state.selection[tab] && state.selection[tab].size) ? state.selection[tab] : new Set();
-  if (selected.size === 0) {
-    float.classList.add("hidden");
-  } else {
-    float.classList.remove("hidden");
-  }
-}
 
-document.getElementById("fab").onclick = () => {
+// --- FAB menu ---
+document.getElementById("fab").onclick = (e) => {
+  e.stopPropagation();
+  document.getElementById("fab-menu").classList.toggle("hidden");
+};
+document.body.onclick = () => {
+  document.getElementById("fab-menu").classList.add("hidden");
+};
+
+document.getElementById("fab-buscar").onclick = () => {
+  document.getElementById("fab-menu").classList.add("hidden");
+  document.getElementById("search-bar").focus();
+};
+document.getElementById("fab-camera").onclick = () => {
+  document.getElementById("fab-menu").classList.add("hidden");
+  openCameraCapture();
+};
+document.getElementById("fab-upload").onclick = () => {
+  document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
 };
+
 document.getElementById("file-input").onchange = async (e) => {
   const files = Array.from(e.target.files || []);
   const tab = state.currentTab;
@@ -236,133 +217,213 @@ document.getElementById("file-input").onchange = async (e) => {
   }
   saveState();
   renderCifras();
+  renderFloatControls();
   toast(`${files.length} cifra(s) adicionada(s)!`);
 };
 
-document.getElementById("select-all-btn").onclick = () => {
-  const tab = state.currentTab;
-  if (!state.selection[tab]) state.selection[tab] = new Set();
-  const all = state.cifras[tab] || [];
-  if (state.selection[tab].size === all.length) {
-    state.selection[tab].clear();
-  } else {
-    all.forEach(c => state.selection[tab].add(c.id));
-  }
-  updateFloatControls();
-  renderCifras();
-};
-document.getElementById("clear-selection-btn").onclick = () => {
-  clearSelection(state.currentTab);
-  renderCifras();
-};
-document.getElementById("delete-selected-btn").onclick = () => {
-  const tab = state.currentTab;
-  const selected = Array.from(state.selection[tab] || []);
-  removeCifras(tab, selected);
-  renderCifras();
-  toast("Cifra(s) excluída(s).");
-};
+// --- Camera Capture ---
+function openCameraCapture() {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <video id="camera-video" autoplay playsinline style="width:100%;max-width:400px;border-radius:10px;"></video>
+      <button id="snap-btn" style="margin:18px auto 0 auto;display:block;">Capturar</button>
+      <button id="close-camera-modal" class="close-modal">&times;</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
 
-// Search bar + dropdown (busca Drive)
-const searchBar = document.getElementById("search-bar");
-const searchDropdown = document.getElementById("search-dropdown");
-let searchResults = [];
-let searchTimeout = null;
-searchBar.oninput = async (e) => {
-  const val = e.target.value.trim();
-  if (searchTimeout) clearTimeout(searchTimeout);
-  if (val.length === 0) {
-    searchDropdown.classList.add("hidden");
-    searchResults = [];
+  const video = modal.querySelector("#camera-video");
+  const snapBtn = modal.querySelector("#snap-btn");
+  const closeBtn = modal.querySelector("#close-camera-modal");
+
+  let stream;
+  navigator.mediaDevices.getUserMedia({ video: true })
+    .then(s => {
+      stream = s;
+      video.srcObject = stream;
+    });
+
+  snapBtn.onclick = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      const url = URL.createObjectURL(blob);
+      const id = Math.random().toString(36).slice(2) + Date.now();
+      const tab = state.currentTab;
+      if (!state.cifras[tab]) state.cifras[tab] = [];
+      const nomePadrao = `FOTO_${new Date().toLocaleDateString().replace(/\//g, '')}_${Date.now()}`;
+      state.cifras[tab].push({ id, url, title: nomePadrao, fullUrl: url, isImage: true });
+      saveState();
+      renderCifras();
+      renderFloatControls();
+      toast("Foto capturada!");
+    }, "image/jpeg", 0.92);
+
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    document.body.removeChild(modal);
+  };
+
+  closeBtn.onclick = () => {
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    document.body.removeChild(modal);
+  };
+}
+
+// --- Float Controls com Renomear e Upload ---
+function renderFloatControls() {
+  const float = document.getElementById("float-controls");
+  const tab = state.currentTab;
+  const selected = (state.selection[tab] && state.selection[tab].size) ? Array.from(state.selection[tab]) : [];
+  float.innerHTML = '';
+
+  if (selected.length === 0) {
+    float.classList.add("hidden");
     return;
   }
-  searchDropdown.innerHTML = '<li style="color:#aaa;">Buscando cifras...</li>';
-  searchDropdown.classList.remove("hidden");
-  searchTimeout = setTimeout(async () => {
-    const files = await searchDrive(val);
-    searchResults = files;
-    if (!files.length) {
-      searchDropdown.innerHTML = '<li style="color:#aaa;">Nenhuma música encontrada</li>';
+  float.classList.remove("hidden");
+
+  const btnDelete = document.createElement("button");
+  btnDelete.id = "delete-selected-btn";
+  btnDelete.innerHTML = "Excluir";
+  btnDelete.onclick = () => {
+    removeCifras(tab, selected);
+    renderFloatControls();
+    renderCifras();
+    toast("Cifra(s) excluída(s).");
+  };
+  float.appendChild(btnDelete);
+
+  if (selected.length === 1) {
+    const btnRename = document.createElement("button");
+    btnRename.id = "rename-selected-btn";
+    btnRename.innerHTML = "Renomear";
+    btnRename.onclick = () => showRenameModal(selected[0]);
+    float.appendChild(btnRename);
+  }
+  if (selected.length >= 1) {
+    const btnUpload = document.createElement("button");
+    btnUpload.id = "upload-selected-btn";
+    btnUpload.innerHTML = "Upload";
+    btnUpload.onclick = () => showUploadModal(selected);
+    float.appendChild(btnUpload);
+  }
+}
+
+// --- Modal de Renomear ---
+function showRenameModal(cifraId) {
+  const tab = state.currentTab;
+  const cifra = (state.cifras[tab] || []).find(c => c.id === cifraId);
+  if (!cifra) return;
+
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  modal.innerHTML = `
+    <div class="modal-content">
+      <label>NOVO NOME:</label>
+      <input type="text" id="rename-input" value="${stripExtension(cifra.title)}" style="text-transform:uppercase;" />
+      <button id="save-rename-btn" class="add-btn">Renomear</button>
+      <button id="close-rename-modal" class="close-modal">&times;</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  const input = modal.querySelector("#rename-input");
+  input.focus();
+  input.selectionStart = 0;
+  input.selectionEnd = input.value.length;
+
+  modal.querySelector("#save-rename-btn").onclick = () => {
+    let novoNome = input.value.trim().toUpperCase();
+    if (novoNome === "") {
+      toast("O nome não pode ser vazio.");
       return;
     }
-    searchDropdown.innerHTML = '';
-    files.forEach((f, idx) => {
-      const li = document.createElement("li");
-      li.textContent = stripExtension(f.name);
-      li.onclick = () => {
-        addCifraFromDrive(f);
-        searchDropdown.classList.add("hidden");
-        searchBar.value = "";
-      };
-      searchDropdown.appendChild(li);
-    });
-  }, 400);
-};
-searchBar.onfocus = () => {
-  if (searchResults.length) searchDropdown.classList.remove("hidden");
-};
-searchBar.onblur = () => setTimeout(() => searchDropdown.classList.add("hidden"), 180);
-
-async function searchDrive(query) {
-  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink,mimeType)&key=${GOOGLE_API_KEY}`;
-  const resp = await fetch(url);
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  return data.files || [];
+    cifra.title = novoNome;
+    saveState();
+    renderCifras();
+    renderFloatControls();
+    document.body.removeChild(modal);
+    showUploadPrompt([cifra]);
+  };
+  modal.querySelector("#close-rename-modal").onclick = () => document.body.removeChild(modal);
 }
-function addCifraFromDrive(file) {
+
+// --- Modal de Upload ---
+function showUploadModal(ids) {
   const tab = state.currentTab;
-  if (!state.cifras[tab]) state.cifras[tab] = [];
-  if (state.cifras[tab].some(c => c.id === file.id)) return;
-  let isImage = file.mimeType && file.mimeType.startsWith("image/");
-  let fullUrl = isImage
-    ? `https://drive.google.com/uc?export=view&id=${file.id}`
-    : `https://drive.google.com/file/d/${file.id}/view?usp=sharing`;
-  let thumbUrl = isImage
-    ? (file.thumbnailLink || fullUrl)
-    : (file.iconLink || fullUrl);
-  state.cifras[tab].push({
-    id: file.id,
-    title: file.name,
-    url: thumbUrl,
-    fullUrl: fullUrl,
-    isImage: isImage
-  });
-  saveState();
-  renderCifras();
-  toast(`Cifra "${stripExtension(file.name)}" adicionada!`);
+  const cifras = (state.cifras[tab] || []).filter(c => ids.includes(c.id));
+  showUploadPrompt(cifras);
 }
 
-// Modal: nova aba
-function showAddTabModal() {
-  const modal = document.getElementById("add-tab-modal");
-  modal.classList.remove("hidden");
-  document.getElementById("add-tab-name").value = "";
-  document.getElementById("save-add-tab-btn").onclick = () => {
-    const name = document.getElementById("add-tab-name").value.trim();
-    const privacy = document.querySelector('input[name="tab-privacy"]:checked').value;
-    if (name) {
-      addTab(name, privacy);
-      modal.classList.add("hidden");
+function showUploadPrompt(cifras) {
+  const modal = document.createElement("div");
+  modal.className = "modal";
+  const plural = cifras.length > 1;
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div>Deseja fazer Upload dessa${plural ? 's' : ''} cifra${plural ? 's' : ''} agora?</div>
+      <button id="upload-confirm-btn" class="add-btn" style="margin-top:18px;">Sim</button>
+      <button id="upload-cancel-btn" class="add-btn" style="background:#ccc;color:#222;margin-top:8px;">Não</button>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.querySelector("#upload-cancel-btn").onclick = () => document.body.removeChild(modal);
+
+  modal.querySelector("#upload-confirm-btn").onclick = async () => {
+    for (const cifra of cifras) {
+      await uploadCifraToDrive(cifra);
     }
+    document.body.removeChild(modal);
+    toast(`${cifras.length} cifra(s) enviada(s) para o Google Drive!`);
   };
-  document.getElementById("close-add-tab-modal").onclick = () => modal.classList.add("hidden");
-}
-// Modal: modo da aba
-function showTabModeModal(tab) {
-  const modal = document.getElementById("tab-mode-modal");
-  modal.classList.remove("hidden");
-  const radios = modal.querySelectorAll('input[name="tab-mode"]');
-  radios.forEach(r => r.checked = (r.value === (tab.mode || "offline")));
-  document.getElementById("save-tab-mode-btn").onclick = () => {
-    const mode = modal.querySelector('input[name="tab-mode"]:checked').value;
-    setTabMode(tab.name, mode);
-    modal.classList.add("hidden");
-  };
-  document.getElementById("close-tab-mode-modal").onclick = () => modal.classList.add("hidden");
 }
 
-// Fullscreen garantido para ocupar 100% da tela, centralizado, sem distorção
+// --- Upload para Google Drive com OAuth2 ---
+// Requer autenticação OAuth2 do usuário dono da pasta, ou token de serviço compartilhado
+async function uploadCifraToDrive(cifra) {
+  const access_token = window.GDRIVE_ACCESS_TOKEN || null;
+  if (!access_token) {
+    toast("Você precisa autenticar com o Google antes de fazer upload.");
+    requestGoogleAuth();
+    return;
+  }
+  const response = await fetch(cifra.fullUrl || cifra.url);
+  const blob = await response.blob();
+  const metadata = {
+    name: cifra.title + ".jpg",
+    parents: [GOOGLE_DRIVE_FOLDER_ID]
+  };
+
+  const form = new FormData();
+  form.append("metadata", new Blob([JSON.stringify(metadata)], { type: "application/json" }));
+  form.append("file", blob);
+
+  await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + access_token
+    },
+    body: form
+  });
+}
+
+// --- OAuth2 Google Sign-In ---
+function requestGoogleAuth() {
+  // Use a popup Google OAuth2 flow
+  const redirect_uri = window.location.origin + window.location.pathname; // ou uma rota dedicada
+  const scope = encodeURIComponent("https://www.googleapis.com/auth/drive.file");
+  const client_id = GOOGLE_CLIENT_ID;
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${client_id}&redirect_uri=${redirect_uri}&response_type=token&scope=${scope}&prompt=consent`;
+
+  window.open(authUrl, "_blank", "width=500,height=650");
+  alert('Após autenticar, copie o access_token da URL e cole no console como: window.GDRIVE_ACCESS_TOKEN = "SEU_TOKEN_AQUI";');
+}
+
+// --- Fullscreen ---
 function openFullscreen(url, title, isImage = true) {
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `
