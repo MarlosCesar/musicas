@@ -359,12 +359,12 @@ async function searchDrive(query) {
   return data.files || [];
 }
 
-// --- Fullscreen (corrigido para baixar blob e exibir imagem) ---
+// --- Fullscreen ---
 function openFullscreen(url) {
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper">
-      <img class="fullscreen-img" src="" alt="Cifra" />
+      <img class="fullscreen-img" src="${url}" alt="Cifra" />
     </div>`;
   overlay.classList.remove("hidden");
   overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
