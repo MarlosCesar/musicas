@@ -48,8 +48,6 @@ body {
   cursor: pointer;
   user-select: none;
 }
-
-/* ========== MELHORIA: Dropdown de busca moderno ========== */
 .search-wrap {
   position: relative;
   flex: 1;
@@ -106,9 +104,7 @@ body {
   background: var(--primary-xlight);
 }
 .search-dropdown.hidden { display: none; }
-/* ========== FIM MELHORIA ========== */
 
-/* ========== MELHORIA: FAB moderno e menu suspenso responsivo ========== */
 .fab {
   position: fixed;
   bottom: 32px;
@@ -163,8 +159,6 @@ body {
 .fab-menu-btn i {
   font-size: 1.3rem;
 }
-/* ========== FIM MELHORIA ========== */
-
 @media (max-width: 700px) {
   .fab { width: 50px; height: 50px; font-size: 1.7rem; bottom: 14px; right: 14px;}
   .fab-menu { right: 18px; bottom: 70px; min-width: 120px; }
@@ -179,7 +173,6 @@ body {
   background: #222;
 }
 
-/* Tabs e outros estilos permanecem iguais */
 .tabs-container {
   display: flex;
   align-items: flex-end;
@@ -435,6 +428,29 @@ body {
   transition: opacity 0.13s;
 }
 .close-modal:hover { opacity: 1; }
+.cloud-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.cloud-list label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--primary-xlight);
+  border-radius: 10px;
+  cursor: pointer;
+}
+.cloud-list img {
+  width: 40px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--gray-mid);
+}
 .add-btn {
   background: var(--accent);
   color: #fff;
@@ -465,31 +481,15 @@ body {
 }
 .toast.show { opacity: 1; pointer-events: all; }
 @media (max-width: 700px) {
-  .header { padding: 12px 0 7px 0;}
+  .header { padding: 16px 0 10px 0;}
   .tab {
     padding: 10px 10px;
     font-size: 1rem;
   }
   .tab-add { width: 32px; height: 32px; font-size: 1.1rem;}
   .fab { width: 50px; height: 50px; font-size: 1.7rem; bottom: 14px; right: 14px;}
-  .fab-label { font-size: 0.93rem; }
+  .fab-menu { right: 18px; bottom: 70px; min-width: 120px; }
   .float-controls { padding: 8px 12px; gap: 12px; }
   .modal-content { padding: 18px 10px 18px 10px;}
-  .fullscreen-img-wrapper {
-    width: 100vw;
-    height: 100vh;
-  }
-  .fullscreen-overlay .fullscreen-img {
-    max-width: 100vw;
-    max-height: 100vh;
-    width: auto;
-    height: auto;
-  }
-  .search-bar, .search-dropdown {
-    font-size: 1rem;
-    min-width: 100px;
-    width: 100%;
-    max-width: 100vw;
-  }
 }
 .hidden { display: none !important; }
