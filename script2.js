@@ -94,7 +94,25 @@ function renderTabs() {
   addBtn.textContent = "+";
   addBtn.onclick = showAddTabModal;
   tabsElem.appendChild(addBtn);
-  handleTabScrollArrows();
+
+  // Não há mais setas ou função handleTabScrollArrows, apenas scroll padrão.
+  // Mantém suporte a arrastar no touch e scroll horizontal com mouse:
+  let isDown = false, startX, scrollLeft;
+  tabsElem.addEventListener('touchstart', e => {
+    isDown = true; startX = e.touches[0].pageX - tabsElem.offsetLeft; scrollLeft = tabsElem.scrollLeft;
+  });
+  tabsElem.addEventListener('touchend', () => isDown = false);
+  tabsElem.addEventListener('touchmove', e => {
+    if (!isDown) return;
+    const x = e.touches[0].pageX - tabsElem.offsetLeft;
+    tabsElem.scrollLeft = scrollLeft - (x - startX);
+  });
+  tabsElem.addEventListener('wheel', e => {
+    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      tabsElem.scrollLeft += e.deltaX;
+      e.preventDefault();
+    }
+  }, { passive: false });
 }
 function renderCifras() {
   const list = document.getElementById("cifra-list");
@@ -223,49 +241,6 @@ document.getElementById("search-bar").oninput = async (e) => {
   }
 };
 
-// --- Tab scroll and arrows ---
-function handleTabScrollArrows() {
-  const tabs = document.getElementById("tabs");
-  const left = document.getElementById("tab-scroll-left");
-  const right = document.getElementById("tab-scroll-right");
-  function updateArrows() {
-    left.classList.toggle("visible", tabs.scrollLeft > 16);
-    right.classList.toggle("visible", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 16);
-  }
-  updateArrows();
-  tabs.onscroll = updateArrows;
-  // Mouse na borda mostra seta
-  document.body.onmousemove = e => {
-    const { clientX, clientY } = e;
-    if (clientY < 130) {
-      if (clientX < 40) left.classList.add("visible");
-      else left.classList.remove("visible");
-      if (window.innerWidth - clientX < 40) right.classList.add("visible");
-      else right.classList.remove("visible");
-    }
-  };
-  left.onclick = () => tabs.scrollBy({ left: -180, behavior: "smooth" });
-  right.onclick = () => tabs.scrollBy({ left: 180, behavior: "smooth" });
-  // Abas arrastáveis no touch
-  let isDown = false, startX, scrollLeft;
-  tabs.addEventListener('touchstart', e => {
-    isDown = true; startX = e.touches[0].pageX - tabs.offsetLeft; scrollLeft = tabs.scrollLeft;
-  });
-  tabs.addEventListener('touchend', () => isDown = false);
-  tabs.addEventListener('touchmove', e => {
-    if (!isDown) return;
-    const x = e.touches[0].pageX - tabs.offsetLeft;
-    tabs.scrollLeft = scrollLeft - (x - startX);
-  });
-  // Mouse wheel horizontal no desktop
-  tabs.addEventListener('wheel', e => {
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      tabs.scrollLeft += e.deltaX;
-      e.preventDefault();
-    }
-  }, { passive: false });
-}
-
 // --- Modal: adicionar aba ---
 function showAddTabModal() {
   const modal = document.getElementById("add-tab-modal");
@@ -390,10 +365,7 @@ function startPolling() {
 }
 
 // --- Startup ---
-window.onload = function() {
-  // Garante que todos overlays estão fechados ao carregar a página
-  document.querySelectorAll('.modal, .fullscreen-overlay, .fab-menu')
-    .forEach(e => e.classList.add('hidden'));
+window.onload = () => {
   loadState();
   renderTabs();
   setTab(state.currentTab);
