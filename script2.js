@@ -272,7 +272,7 @@ document.getElementById("fab").onclick = () => {
 };
 
 document.getElementById("fab-buscar").onclick = () => {
-  document.getElementById("fab-menu").classlist.add("hidden");
+  document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
 };
 
