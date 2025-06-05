@@ -75,26 +75,27 @@ function clearSelection(tab) {
   updateFloatControls();
 }
 
+// Clique na logo recarrega a página mantendo as cifras
+document.addEventListener("DOMContentLoaded", () => {
+  const logo = document.querySelector(".logo");
+  if (logo) {
+    logo.style.cursor = "pointer";
+    logo.onclick = () => {
+      location.reload();
+    };
+  }
+});
+
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
   tabsElem.innerHTML = "";
   state.tabs.forEach((tab, idx) => {
+    const isSelected = state.currentTab === tab.name;
     const btn = document.createElement("button");
-    btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}${tab.type === "custom" ? " custom" : ""}`;
-    btn.textContent = tab.name;
-    btn.onclick = () => setTab(tab.name);
+    btn.className = `tab${isSelected ? " active" : ""} ${tab.mode || "offline"}${tab.type === "custom" ? " custom" : ""}`;
 
-    // Menu das abas padrão
-    if (tab.type === "default") {
-      const more = document.createElement("span");
-      more.className = "tab-more";
-      more.innerHTML = "&#8942;";
-      more.onclick = e => { e.stopPropagation(); showTabModeModal(tab); };
-      btn.appendChild(more);
-    }
-
-    // X vermelho nas abas customizadas
-    if (tab.type === "custom") {
+    // Botão X vermelho nas abas customizadas, à esquerda na aba selecionada
+    if (tab.type === "custom" && isSelected) {
       const close = document.createElement("button");
       close.className = "tab-close";
       close.innerHTML = "&times;";
@@ -105,11 +106,37 @@ function renderTabs() {
         }
       };
       btn.appendChild(close);
+    }
 
-      // No desktop, mostra X ao hover/focus; no touch, ao clicar
+    // Nome da aba
+    const tabLabel = document.createElement("span");
+    tabLabel.textContent = tab.name;
+    tabLabel.onclick = () => setTab(tab.name);
+    btn.appendChild(tabLabel);
+
+    // 3 pontos no lado direito (igual abas padrão)
+    const more = document.createElement("span");
+    more.className = "tab-more";
+    more.innerHTML = "&#8942;";
+    more.onclick = e => { e.stopPropagation(); showTabModeModal(tab); };
+    btn.appendChild(more);
+
+    // X vermelho aparece no hover/focus no mobile/touch também:
+    if (tab.type === "custom" && !isSelected) {
       btn.onmouseenter = () => btn.classList.add("show-x");
       btn.onmouseleave = () => btn.classList.remove("show-x");
       btn.ontouchstart = () => btn.classList.toggle("show-x");
+      // Coloca o X à esquerda só se hover/focus (não selecionada)
+      const close = document.createElement("button");
+      close.className = "tab-close";
+      close.innerHTML = "&times;";
+      close.onclick = e => {
+        e.stopPropagation();
+        if (confirm(`Remover a aba "${tab.name}" e todas as suas cifras?`)) {
+          removeTab(tab.name);
+        }
+      };
+      btn.insertBefore(close, btn.firstChild);
     }
 
     tabsElem.appendChild(btn);
@@ -120,6 +147,7 @@ function renderTabs() {
   addBtn.textContent = "+";
   addBtn.onclick = showAddTabModal;
   tabsElem.appendChild(addBtn);
+
   // Suporte a scroll em touch e wheel
   let isDown = false, startX, scrollLeft;
   tabsElem.onmousedown = e => { isDown = true; startX = e.pageX - tabsElem.offsetLeft; scrollLeft = tabsElem.scrollLeft; };
@@ -190,7 +218,7 @@ function renderCifras() {
         // fallback caso a miniatura não carregue
         img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
       };
-      img.onclick = e => { openFullscreen(cifra.fullUrl || cifra.url); e.stopPropagation(); };
+      img.onclick = e => { openFullscreen(cifra.fullUrl || cifra.url, stripExtension(cifra.title)); e.stopPropagation(); };
       // Nome
       const title = document.createElement("div");
       title.className = "cifra-title";
@@ -308,14 +336,10 @@ function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
   if (state.cifras[tab].some(c => c.id === file.id)) return;
-  // thumbnailLink geralmente é uma imagem pequena do Google, mas pode não ser imagem full. 
-  // O fullUrl deve ser um link direto para visualizar a imagem no drive.
-  // Para imagens, o uc?export=view&id=... funciona.
   let fullUrl = "";
   if (file.mimeType && file.mimeType.startsWith("image/")) {
     fullUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
   } else {
-    // fallback (abre arquivo no Google Drive)
     fullUrl = `https://drive.google.com/file/d/${file.id}/view?usp=sharing`;
   }
   state.cifras[tab].push({
@@ -357,14 +381,21 @@ function showTabModeModal(tab) {
   };
   document.getElementById("close-tab-mode-modal").onclick = () => modal.classList.add("hidden");
 }
-// Fullscreen
-function openFullscreen(url) {
+
+// Fullscreen - imagem ocupa 100% da tela, centralizada, mantém funcionalidades
+function openFullscreen(url, title) {
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
-    <img class="fullscreen-img" src="${url}" alt="Cifra" />`;
+    <img class="fullscreen-img" src="${url}" alt="${title || 'Cifra'}" style="max-width:100vw;max-height:100vh;object-fit:contain;display:block;margin:auto;" />`;
   overlay.classList.remove("hidden");
   overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
+
+  // Corrigir bug: se a imagem não carregar, mostra fallback visual
+  const img = overlay.querySelector(".fullscreen-img");
+  img.onerror = function() {
+    img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
+  };
 }
 
 // Selection helpers
