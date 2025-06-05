@@ -17,6 +17,11 @@ let state = {
   search: "",
 };
 
+// Remove extensão de arquivo do nome
+function stripExtension(filename) {
+  return filename.replace(/\.[^/.]+$/, "");
+}
+
 function saveState() {
   localStorage.setItem(LOCALSTORE_KEY, JSON.stringify({
     tabs: state.tabs,
@@ -154,7 +159,6 @@ function renderCifras() {
   const empty = document.getElementById("empty-state");
   const tab = state.currentTab;
   let cifras = (state.cifras[tab] || []);
-  // Filtro de busca NÃO afeta lista principal, somente search dropdown adiciona cifras.
   list.innerHTML = "";
   if (!cifras.length) {
     empty.style.display = "flex";
@@ -181,12 +185,16 @@ function renderCifras() {
       const img = document.createElement("img");
       img.className = "cifra-img";
       img.src = cifra.url;
-      img.alt = cifra.title;
-      img.onclick = e => { openFullscreen(cifra.url); e.stopPropagation(); };
+      img.alt = stripExtension(cifra.title);
+      img.onerror = function() {
+        // fallback caso a miniatura não carregue
+        img.src = "https://cdn.jsdelivr.net/gh/marloscesar/musicas@main/fallback-thumbnail.png";
+      };
+      img.onclick = e => { openFullscreen(cifra.fullUrl || cifra.url); e.stopPropagation(); };
       // Nome
       const title = document.createElement("div");
       title.className = "cifra-title";
-      title.textContent = cifra.title;
+      title.textContent = stripExtension(cifra.title);
       li.appendChild(img);
       li.appendChild(title);
       list.appendChild(li);
@@ -217,7 +225,7 @@ document.getElementById("file-input").onchange = async (e) => {
     if (!file.type.startsWith("image/")) continue;
     const url = URL.createObjectURL(file);
     const id = Math.random().toString(36).slice(2) + Date.now();
-    state.cifras[tab].push({ id, url, title: file.name });
+    state.cifras[tab].push({ id, url, title: file.name, fullUrl: url });
   }
   saveState();
   renderCifras();
@@ -274,7 +282,7 @@ searchBar.oninput = async (e) => {
     searchDropdown.innerHTML = '';
     files.forEach((f, idx) => {
       const li = document.createElement("li");
-      li.textContent = f.name;
+      li.textContent = stripExtension(f.name);
       li.onclick = () => {
         addCifraFromDrive(f);
         searchDropdown.classList.add("hidden");
@@ -290,7 +298,7 @@ searchBar.onfocus = () => {
 searchBar.onblur = () => setTimeout(() => searchDropdown.classList.add("hidden"), 180);
 
 async function searchDrive(query) {
-  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink)&key=${GOOGLE_API_KEY}`;
+  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink,mimeType)&key=${GOOGLE_API_KEY}`;
   const resp = await fetch(url);
   if (!resp.ok) return [];
   const data = await resp.json();
@@ -299,16 +307,26 @@ async function searchDrive(query) {
 function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
-  // Evitar duplicatas
   if (state.cifras[tab].some(c => c.id === file.id)) return;
+  // thumbnailLink geralmente é uma imagem pequena do Google, mas pode não ser imagem full. 
+  // O fullUrl deve ser um link direto para visualizar a imagem no drive.
+  // Para imagens, o uc?export=view&id=... funciona.
+  let fullUrl = "";
+  if (file.mimeType && file.mimeType.startsWith("image/")) {
+    fullUrl = `https://drive.google.com/uc?export=view&id=${file.id}`;
+  } else {
+    // fallback (abre arquivo no Google Drive)
+    fullUrl = `https://drive.google.com/file/d/${file.id}/view?usp=sharing`;
+  }
   state.cifras[tab].push({
     id: file.id,
     title: file.name,
-    url: `https://drive.google.com/uc?export=view&id=${file.id}`
+    url: file.thumbnailLink || file.iconLink || fullUrl,
+    fullUrl: fullUrl
   });
   saveState();
   renderCifras();
-  toast(`Cifra "${file.name}" adicionada!`);
+  toast(`Cifra "${stripExtension(file.name)}" adicionada!`);
 }
 
 // Modal: nova aba
