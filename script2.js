@@ -12,81 +12,6 @@ const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
 const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
 
-// IndexedDB Config
-const DB_NAME = "Cifras2DB";
-const DB_VERSION = 1;
-const CIFRAS_STORE = "cifras";
-
-// IndexedDB helpers
-function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = e => {
-      const db = e.target.result;
-      if (!db.objectStoreNames.contains(CIFRAS_STORE)) {
-        db.createObjectStore(CIFRAS_STORE, { keyPath: "id" });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function saveCifraToDB(cifra) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CIFRAS_STORE, "readwrite");
-    tx.objectStore(CIFRAS_STORE).put(cifra);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function getAllCifrasFromDB() {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CIFRAS_STORE, "readonly");
-    const req = tx.objectStore(CIFRAS_STORE).getAll();
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(tx.error);
-  });
-}
-
-async function removeCifraFromDB(id) {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(CIFRAS_STORE, "readwrite");
-    tx.objectStore(CIFRAS_STORE).delete(id);
-    tx.oncomplete = resolve;
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-// Função para converter blob em base64 para persistência
-function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-// Função para converter base64 para Blob
-function base64ToBlob(base64) {
-  const arr = base64.split(",");
-  const mime = arr[0].match(/:(.*?);/)[1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while(n--) u8arr[n] = bstr.charCodeAt(n);
-  return new Blob([u8arr], {type:mime});
-}
-
-function stripExtension(filename) {
-  return filename.replace(/\.[^/.]+$/, "");
-}
-
 let state = {
   tabs: [...TABS_DEFAULT],
   cifras: {},
@@ -98,8 +23,12 @@ let state = {
 
 let pollTimer = null;
 
+function stripExtension(filename) {
+  return filename.replace(/\.[^/.]+$/, "");
+}
+
 // --- State Management ---
-async function saveState() {
+function saveState() {
   // Converte todos os Sets para arrays antes de salvar
   const selectionToSave = {};
   for (const tab in state.selection) {
@@ -107,17 +36,17 @@ async function saveState() {
   }
   localStorage.setItem(LOCALSTORE_KEY, JSON.stringify({
     tabs: state.tabs,
-    // cifras: state.cifras, // Cifras agora são salvas no IndexedDB
+    cifras: state.cifras,
     selection: selectionToSave,
     currentTab: state.currentTab
   }));
 }
-async function loadState() {
+function loadState() {
   const s = localStorage.getItem(LOCALSTORE_KEY);
   if (s) {
     const loaded = JSON.parse(s);
     state.tabs = loaded.tabs || [...TABS_DEFAULT];
-    // state.cifras = loaded.cifras || {}; // Cifras agora são carregadas do IndexedDB
+    state.cifras = loaded.cifras || {};
     state.selection = {};
     if (loaded.selection) {
       // Corrige cada tab para ser Set
@@ -129,13 +58,6 @@ async function loadState() {
     }
     state.currentTab = loaded.currentTab || "Domingo Manhã";
   }
-  // Carrega cifras do IndexedDB
-  const allCifras = await getAllCifrasFromDB();
-  state.cifras = {};
-  allCifras.forEach(cifra => {
-    if (!state.cifras[cifra.tab]) state.cifras[cifra.tab] = [];
-    state.cifras[cifra.tab].push(cifra);
-  });
 }
 function setTab(tabName) {
   state.currentTab = tabName;
@@ -154,11 +76,8 @@ function setTabMode(tabName, mode) {
   const tab = state.tabs.find(t => t.name === tabName);
   if (tab) { tab.mode = mode; saveState(); renderTabs(); renderCifras(); }
 }
-async function removeCifras(tab, ids) {
+function removeCifras(tab, ids) {
   state.cifras[tab] = (state.cifras[tab] || []).filter(cifra => !ids.includes(cifra.id));
-  for (const id of ids) {
-    await removeCifraFromDB(id);
-  }
   state.selection[tab] = new Set();
   saveState(); renderCifras(); updateFloatControls();
 }
@@ -198,7 +117,7 @@ function renderCifras() {
   const tab = state.currentTab;
   let cifras = (state.cifras[tab] || []);
   if (state.search && state.search.length > 0) {
-    cifras = cifras.filter(c => stripExtension(c.title).toLowerCase().includes(state.search.toLowerCase()));
+    cifras = cifras.filter(c => c.title.toLowerCase().includes(state.search.toLowerCase()));
   }
   list.innerHTML = "";
   if (!cifras.length) {
@@ -223,14 +142,11 @@ function renderCifras() {
       };
       const img = document.createElement("img");
       img.className = "cifra-img";
-      if (cifra.base64) {
-        img.src = cifra.base64;
-      } else {
-        img.src = cifra.url;
-      }
-      img.alt = stripExtension(cifra.title);
-      img.onclick = e => { openFullscreen(cifra.base64 || cifra.url); e.stopPropagation(); };
+      img.src = cifra.url;
+      img.alt = cifra.title;
+      img.onclick = e => { openFullscreen(cifra.url); e.stopPropagation(); };
 
+      // Corrija aqui:
       const title = document.createElement("div");
       title.className = "cifra-title";
       title.textContent = stripExtension(cifra.title);
@@ -244,16 +160,16 @@ function renderCifras() {
 function updateFloatControls() {
   const float = document.getElementById("float-controls");
   const tab = state.currentTab;
-  const selected = (state.selection[tab] && state.selection[tab].size) ? state.selection[tab] : new Set();
+  const selected = (state.selection[tab] && state.selection[tab].size) ? Array.from(state.selection[tab]) : [];
   // Sempre manter Selecionar todas, Limpar, Excluir
   document.getElementById("select-all-btn").classList.remove("hidden");
   document.getElementById("clear-selection-btn").classList.remove("hidden");
   document.getElementById("delete-selected-btn").classList.remove("hidden");
   // Renomear só se 1 selecionada
-  document.getElementById("rename-selected-btn").classList.toggle("hidden", selected.size !== 1);
+  document.getElementById("rename-selected-btn").classList.toggle("hidden", selected.length !== 1);
   // Upload só se >=1 selecionada
-  document.getElementById("upload-selected-btn").classList.toggle("hidden", selected.size === 0);
-  if (selected.size === 0) {
+  document.getElementById("upload-selected-btn").classList.toggle("hidden", selected.length === 0);
+  if (selected.length === 0) {
     float.classList.add("hidden");
   } else {
     float.classList.remove("hidden");
@@ -340,19 +256,33 @@ function showRenameModal(cifraId) {
 document.getElementById("fab").onclick = () => {
   document.getElementById("fab-menu").classList.toggle("hidden");
 };
-// Alterado para fab-local e fab-cloud
-document.getElementById("fab-local").onclick = () => {
+document.getElementById("fab-buscar").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
 };
-document.getElementById("fab-cloud").onclick = () => {
+document.getElementById("fab-camera").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
-  showCloudModal();
-};
-// FAB tirar foto
-if (document.getElementById("fab-camera")) {
   document.getElementById("fab-camera").onclick = openCameraCapture;
-}
+};
+document.getElementById("fab-upload").onclick = () => {
+  document.getElementById("fab-menu").classList.add("hidden");
+  document.getElementById("file-input").click();
+};
+
+document.getElementById("fab-upload").onclick = async () => {
+  document.getElementById("fab-menu").classList.add("hidden");
+  const tab = state.currentTab;
+  const selected = Array.from(state.selection[tab] || []);
+  if (!selected.length) {
+    toast("Selecione uma ou mais cifras para enviar ao Google Drive.");
+    return;
+  }
+  for (const id of selected) {
+    const cifra = (state.cifras[tab] || []).find(c => c.id === id);
+    if (cifra) await uploadCifraToDrive(cifra);
+  }
+  toast("Upload realizado para o Google Drive!");
+};
 
 // --- File input upload ---
 document.getElementById("file-input").onchange = async (e) => {
@@ -361,11 +291,9 @@ document.getElementById("file-input").onchange = async (e) => {
   if (!state.cifras[tab]) state.cifras[tab] = [];
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue;
-    const base64 = await blobToBase64(file);
+    const url = URL.createObjectURL(file);
     const id = Math.random().toString(36).slice(2) + Date.now();
-    const cifra = { id, base64, title: file.name, tab }; // Adiciona 'tab' para IndexedDB
-    state.cifras[tab].push(cifra);
-    await saveCifraToDB(cifra); // Salva no IndexedDB
+    state.cifras[tab].push({ id, url, title: file.name });
   }
   saveState();
   renderCifras();
@@ -421,27 +349,24 @@ async function openCameraCapture() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Converte para blob e adiciona à lista
-    canvas.toBlob(async blob => { // Adicionado async aqui
+    canvas.toBlob(blob => {
       if (stream) stream.getTracks().forEach(track => track.stop());
       overlay.remove();
 
       // Gera URL para exibição e objeto cifra
-      const base64 = await blobToBase64(blob); // Convertido para base64
+      const url = URL.createObjectURL(blob);
       const now = new Date();
-      const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")}.${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}.${now.getSeconds().toString().padStart(2,"0")}.jpg`;
+      const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}.${now.getSeconds().toString().padStart(2,"0")}.jpg`;
       const id = "foto-" + now.getTime();
 
       const tab = state.currentTab;
       if (!state.cifras[tab]) state.cifras[tab] = [];
-      const cifra = {
+      state.cifras[tab].push({
         id,
         title,
-        base64, // Usando base64
-        createdAt: now.toISOString(),
-        tab // Adiciona 'tab' para IndexedDB
-      };
-      state.cifras[tab].push(cifra);
-      await saveCifraToDB(cifra); // Salva no IndexedDB
+        url,
+        createdAt: now.toISOString()
+      });
       if (!state.selection[tab]) state.selection[tab] = new Set();
       state.selection[tab].add(id);
 
@@ -455,26 +380,43 @@ async function openCameraCapture() {
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
-  // Busca online se houver termo
-  if (val.length) {
-    // Busca no Google Drive
-    const files = await searchDrive(val);
-    // Mostra modal para selecionar
-    showCloudModal(files);
-  } else {
-    renderCifras();
+  renderCifras();
+  // Dropdown de sugestões de busca
+  const dropdown = document.getElementById("search-dropdown");
+  if (val.length === 0) {
+    dropdown.classList.add("hidden");
+    dropdown.innerHTML = "";
+    return;
   }
+  dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
+  dropdown.classList.remove("hidden");
+  const files = await searchDrive(val);
+  dropdown.innerHTML = "";
+  if (!files.length) {
+    dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
+    return;
+  }
+  files.forEach(f => {
+    const li = document.createElement("li");
+    li.textContent = stripExtension(f.name);
+    li.onclick = () => {
+      addCifraFromDrive(f);
+      dropdown.classList.add("hidden");
+      document.getElementById("search-bar").value = "";
+      state.search = "";
+      renderCifras();
+    };
+    dropdown.appendChild(li);
+  });
 };
 document.getElementById("search-bar").onfocus = () => {
-  // Removido o dropdown de sugestões, agora usa modal
+  if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
 };
 document.getElementById("search-bar").onblur = () => setTimeout(() => {
-  // Removido o dropdown de sugestões, agora usa modal
+  document.getElementById("search-dropdown").classList.add("hidden");
 }, 200);
 
 // --- Adicionar cifra da nuvem ao clicar na sugestão ---
-// Esta função será substituída pela lógica do showCloudModal
-/*
 function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
@@ -488,12 +430,11 @@ function addCifraFromDrive(file) {
   renderCifras();
   toast(`Cifra "${file.name}" adicionada!`);
 }
-*/
 
 // --- Google Drive Search ---
 async function searchDrive(query) {
   if (!query) return [];
-  const url = `https://www.googleapis.com/drive/v3/files?q=\'${GOOGLE_DRIVE_FOLDER_ID}\'+in+parents+and+trashed=false+and+name+contains+\'${encodeURIComponent(query)}\'&fields=files(id,name,thumbnailLink,iconLink,mimeType)&key=${GOOGLE_API_KEY}`;
+  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink,mimeType)&key=${GOOGLE_API_KEY}`;
   const resp = await fetch(url);
   if (!resp.ok) return [];
   const data = await resp.json();
@@ -504,10 +445,18 @@ async function searchDrive(query) {
 function openFullscreen(url) {
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
-    <img class="fullscreen-img" src="${url}" alt="Cifra" />`;
+    <div class="fullscreen-img-wrapper">
+      <img class="fullscreen-img" src="${url}" alt="Cifra" />
+    </div>`;
   overlay.classList.remove("hidden");
   overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
   overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
+}
+
+// --- Upload para Google Drive (mantém sua integração atual) ---
+async function uploadCifraToDrive(cifra) {
+  // Implemente aqui sua integração OAuth2 real Google Drive!
+  alert("Upload real para o Google Drive precisa ser implementado com OAuth2!");
 }
 
 // --- Selection helpers ---
@@ -521,7 +470,7 @@ function toast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
-  setTimeout(() => t.classList.remove("show"), 3000);
+  setTimeout(() => t.classList.remove("show"), 2000);
 }
 
 // --- Tab scroll and arrows ---
@@ -535,7 +484,6 @@ function handleTabScrollArrows() {
   }
   updateArrows();
   tabs.onscroll = updateArrows;
-  // Mouse na borda mostra seta
   document.body.onmousemove = e => {
     const { clientX, clientY } = e;
     if (clientY < 130) {
@@ -547,19 +495,17 @@ function handleTabScrollArrows() {
   };
   left.onclick = () => tabs.scrollBy({ left: -180, behavior: "smooth" });
   right.onclick = () => tabs.scrollBy({ left: 180, behavior: "smooth" });
-  // Abas arrastáveis no touch
   let isDown = false, startX, scrollLeft;
-  tabs.addEventListener("touchstart", e => {
+  tabs.addEventListener('touchstart', e => {
     isDown = true; startX = e.touches[0].pageX - tabs.offsetLeft; scrollLeft = tabs.scrollLeft;
   });
-  tabs.addEventListener("touchend", () => isDown = false);
-  tabs.addEventListener("touchmove", e => {
+  tabs.addEventListener('touchend', () => isDown = false);
+  tabs.addEventListener('touchmove', e => {
     if (!isDown) return;
     const x = e.touches[0].pageX - tabs.offsetLeft;
     tabs.scrollLeft = scrollLeft - (x - startX);
   });
-  // Mouse wheel horizontal no desktop
-  tabs.addEventListener("wheel", e => {
+  tabs.addEventListener('wheel', e => {
     if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
       tabs.scrollLeft += e.deltaX;
       e.preventDefault();
@@ -603,7 +549,6 @@ function showCloudModal(files=[]) {
   modal.classList.remove("hidden");
   const list = document.getElementById("cloud-list");
   list.innerHTML = "";
-  // Busca se necessário
   if (!files.length) {
     list.innerHTML = "<div>Buscando cifras na nuvem...</div>";
     searchDrive(state.search || "").then(files => showCloudModal(files));
@@ -622,25 +567,21 @@ function showCloudModal(files=[]) {
     img.src = f.thumbnailLink || f.iconLink;
     img.width = 40; img.height = 56; img.alt = f.name;
     const span = document.createElement("span");
-    span.textContent = stripExtension(f.name);
+    span.textContent = f.name;
     label.appendChild(cb); label.appendChild(img); label.appendChild(span);
     list.appendChild(label);
   });
-  document.getElementById("add-cloud-btn").onclick = async () => {
+  document.getElementById("add-cloud-btn").onclick = () => {
     const selected = Array.from(list.querySelectorAll("input:checked")).map(cb => cb.value);
     const tab = state.currentTab;
     if (!state.cifras[tab]) state.cifras[tab] = [];
-    const added = files.filter(f => selected.includes(f.id)).map(f => {
-      const cifra = {
+    files.filter(f => selected.includes(f.id)).forEach(f => {
+      state.cifras[tab].push({
         id: f.id,
         title: f.name,
-        url: `https://drive.google.com/uc?export=view&id=${f.id}`,
-        tab // Adiciona 'tab' para IndexedDB
-      };
-      state.cifras[tab].push(cifra);
-      return cifra;
+        url: `https://drive.google.com/uc?export=view&id=${f.id}`
+      });
     });
-    // Não salva no IndexedDB pois são URLs da nuvem, mas o objeto cifra precisa do 'tab'
     saveState();
     renderCifras();
     modal.classList.add("hidden");
@@ -649,9 +590,34 @@ function showCloudModal(files=[]) {
   document.getElementById("close-cloud-modal").onclick = () => modal.classList.add("hidden");
 }
 
-// --- Initial Load ---
-loadState().then(() => {
+// --- Selection helpers ---
+function isSelected(id) {
+  const tab = state.currentTab;
+  return state.selection[tab] && state.selection[tab].has(id);
+}
+
+// --- Toast ---
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+// --- Polling for online tabs ---
+function startPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
+    state.tabs.filter(tab => tab.mode === "online").forEach(async tab => {
+      // Simulação, expanda para integração real se desejar
+    });
+  }, POLL_INTERVAL);
+}
+
+// --- Startup ---
+window.onload = () => {
+  loadState();
   renderTabs();
-  renderCifras();
-  updateFloatControls();
-});
+  setTab(state.currentTab);
+  startPolling();
+};
