@@ -29,10 +29,15 @@ function stripExtension(filename) {
 
 // --- State Management ---
 function saveState() {
+  // Converte todos os Sets para arrays antes de salvar
+  const selectionToSave = {};
+  for (const tab in state.selection) {
+    selectionToSave[tab] = Array.from(state.selection[tab] || []);
+  }
   localStorage.setItem(LOCALSTORE_KEY, JSON.stringify({
     tabs: state.tabs,
     cifras: state.cifras,
-    selection: state.selection,
+    selection: selectionToSave,
     currentTab: state.currentTab
   }));
 }
@@ -42,7 +47,15 @@ function loadState() {
     const loaded = JSON.parse(s);
     state.tabs = loaded.tabs || [...TABS_DEFAULT];
     state.cifras = loaded.cifras || {};
-    state.selection = loaded.selection || {};
+    state.selection = {};
+    if (loaded.selection) {
+      // Corrige cada tab para ser Set
+      for (const tab in loaded.selection) {
+        state.selection[tab] = new Set(Array.isArray(loaded.selection[tab]) 
+          ? loaded.selection[tab] 
+          : Object.values(loaded.selection[tab]));
+      }
+    }
     state.currentTab = loaded.currentTab || "Domingo Manhã";
   }
 }
