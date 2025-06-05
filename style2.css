@@ -24,7 +24,6 @@ body {
   min-height: 100vh;
 }
 .app-container { min-height: 100vh; display: flex; flex-direction: column; }
-/* Header e search */
 .header {
   background: var(--primary);
   padding: 16px 0 10px 0;
@@ -283,6 +282,12 @@ body {
   background: #fff;
   display: block;
   margin: 0 auto;
+}
+.fullscreen-overlay .fullscreen-iframe {
+  width: 100vw;
+  height: 100vh;
+  border: none;
+  background: #fff;
 }
 .fullscreen-overlay .close-fullscreen {
   position: absolute;
