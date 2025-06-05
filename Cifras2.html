@@ -46,10 +46,12 @@
         <button id="delete-selected-btn" title="Excluir selecionadas"><span>&#128465;</span></button>
       </div>
     </main>
-    <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra">
-      <svg width="32" height="32" viewBox="0 0 32 32" class="icon-folder"><path d="M4 7a2 2 0 0 1 2-2h5.5a2 2 0 0 1 1.6.8l2.1 2.8H26a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7z" fill="#fff" stroke="#ff6d39" stroke-width="2"/><path d="M12 15h8M12 19h5" stroke="#ff6d39" stroke-width="2" stroke-linecap="round"/></svg>
-      <span class="fab-label">Buscar</span>
-    </button>
+    <button id="fab">+</button>
+<div id="fab-menu" class="fab-menu hidden">
+  <button id="fab-buscar" class="fab-menu-btn"><i class="icon-search"></i>Buscar</button>
+  <button id="fab-camera" class="fab-menu-btn"><i class="icon-camera"></i>Tirar foto</button>
+  <button id="fab-upload" class="fab-menu-btn"><i class="icon-upload"></i>Upload</button>
+</div>
     <input id="file-input" type="file" class="hidden" accept="image/*" multiple />
     <!-- Modal para adicionar nova aba -->
     <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
