@@ -258,7 +258,7 @@ document.getElementById("fab").onclick = () => {
 };
 document.getElementById("fab-buscar").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
-  document.getElementById("search-bar").focus();
+  document.getElementById("file-input").click();
 };
 document.getElementById("fab-camera").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
