@@ -48,12 +48,67 @@ body {
   cursor: pointer;
   user-select: none;
 }
+
+/* ========== MELHORIA: Dropdown de busca moderno ========== */
 .search-wrap {
   position: relative;
   flex: 1;
   max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
 }
+.search-bar {
+  background: var(--primary-xlight);
+  border: none;
+  border-radius: var(--radius);
+  padding: 12px 20px 12px 44px;
+  width: 100%;
+  font-size: 1.12rem;
+  color: var(--primary);
+  outline: none;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  background-image: url('data:image/svg+xml;utf8,<svg width="22" height="22" fill="none" stroke="%231a202c" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="7"/><path d="M20 20l-4.35-4.35"/></svg>');
+  background-repeat: no-repeat;
+  background-position: 12px center;
+}
+.search-dropdown {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  min-width: 180px;
+  background: var(--white);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+  z-index: 33;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 1rem;
+  max-height: 270px;
+  overflow-y: auto;
+  transition: width 0.2s;
+}
+.search-dropdown li {
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: background 0.13s;
+  border-bottom: 1px solid #f1f1f1;
+}
+.search-dropdown li:last-child {
+  border-bottom: none;
+}
+.search-dropdown li:hover, .search-dropdown li.active {
+  background: var(--primary-xlight);
+}
+.search-dropdown.hidden { display: none; }
+/* ========== FIM MELHORIA ========== */
 
+/* ========== MELHORIA: FAB moderno e menu suspenso responsivo ========== */
 .fab {
   position: fixed;
   bottom: 32px;
@@ -72,6 +127,7 @@ body {
   z-index: 1001;
   cursor: pointer;
   transition: background 0.18s;
+  gap: 0.5rem;
 }
 .fab:hover { background: var(--accent-hover);}
 .fab-menu {
@@ -107,10 +163,14 @@ body {
 .fab-menu-btn i {
   font-size: 1.3rem;
 }
+/* ========== FIM MELHORIA ========== */
+
 @media (max-width: 700px) {
   .fab { width: 50px; height: 50px; font-size: 1.7rem; bottom: 14px; right: 14px;}
   .fab-menu { right: 18px; bottom: 70px; min-width: 120px; }
+  .fab-label { font-size: 0.93rem; }
 }
+
 /* Modal camera */
 #camera-video {
   width: 100%;
@@ -118,58 +178,6 @@ body {
   border-radius: 12px;
   background: #222;
 }
-
-/* Campo de busca */
-.search-bar {
-  background: var(--primary-xlight);
-  border: none;
-  border-radius: var(--radius);
-  padding: 12px 20px 12px 44px;
-  width: 100%;
-  font-size: 1.12rem;
-  color: var(--primary);
-  outline: none;
-  box-sizing: border-box;
-  margin-bottom: 6px;
-  background-image: url('data:image/svg+xml;utf8,<svg width="22" height="22" fill="none" stroke="%231a202c" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="7"/><path d="M20 20l-4.35-4.35"/></svg>');
-  background-repeat: no-repeat;
-  background-position: 12px center;
-}
-
-/* Dropdown igual ao campo, arredondado e responsivo */
-.search-dropdown {
-  position: absolute;
-  left: 0;
-  top: 100%;
-  width: 100%;
-  min-width: 180px;
-  background: var(--white);
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-  z-index: 33;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  font-size: 1rem;
-  max-height: 270px;
-  overflow-y: auto;
-  transition: width 0.2s;
-}
-.search-dropdown li {
-  padding: 10px 22px;
-  cursor: pointer;
-  transition: background 0.13s;
-  border-bottom: 1px solid #f1f1f1;
-}
-.search-dropdown li:last-child {
-  border-bottom: none;
-}
-.search-dropdown li:hover, .search-dropdown li.active {
-  background: var(--primary-xlight);
-}
-.search-dropdown.hidden { display: none; }
 
 /* Tabs e outros estilos permanecem iguais */
 .tabs-container {
@@ -367,35 +375,6 @@ body {
   opacity: 0.8;
   z-index: 10001;
 }
-.fab {
-  position: fixed;
-  bottom: 32px;
-  right: 32px;
-  background: var(--accent);
-  color: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 64px;
-  height: 64px;
-  font-size: 2.4rem;
-  box-shadow: 0 2px 16px rgba(255,109,57,0.27);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1001;
-  cursor: pointer;
-  transition: background 0.18s;
-  gap: 0.5rem;
-}
-.fab:hover { background: var(--accent-hover);}
-.fab-label {
-  font-size: 1.08rem;
-  font-weight: 600;
-  color: #fff;
-  margin-left: 6px;
-  letter-spacing: 0.5px;
-}
-.icon-folder { margin-right: 0px; }
 .float-controls {
   position: fixed;
   bottom: 110px;
