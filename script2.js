@@ -383,6 +383,111 @@ async function openCameraCapture() {
   };
 }
 
+// --- Busca Inteligente Local nas Cifras da Aba Atual ---
+function buscaCifrasLocal(query, cifrasTab) {
+  if (!query) return [];
+  const q = query.toLowerCase();
+  const resultado = [];
+  const usados = new Set();
+
+  // 1. Começa com o texto digitado
+  cifrasTab.filter(c => c.title.toLowerCase().startsWith(q))
+    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
+    .forEach(c => { resultado.push(c); usados.add(c.id); });
+
+  // 2. É igual ao texto digitado
+  cifrasTab.filter(c => c.title.toLowerCase() === q && !usados.has(c.id))
+    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
+    .forEach(c => { resultado.push(c); usados.add(c.id); });
+
+  // 3. Ordem alfabética (restante)
+  cifrasTab.filter(c => !usados.has(c.id))
+    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
+    .forEach(c => { resultado.push(c); usados.add(c.id); });
+
+  // 4. Contém o texto em qualquer parte (mas não nas opções anteriores)
+  cifrasTab.filter(c => c.title.toLowerCase().includes(q) && !usados.has(c.id))
+    .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
+    .forEach(c => { resultado.push(c); usados.add(c.id); });
+
+  return resultado.slice(0, 20);
+}
+
+// --- Substitua o bloco de busca do search-bar pelo abaixo ---
+document.getElementById("search-bar").oninput = async (e) => {
+  const val = e.target.value.trim();
+  state.search = val;
+  renderCifras();
+
+  const dropdown = document.getElementById("search-dropdown");
+  // Busca local nas cifras da aba atual
+  const cifrasTab = state.cifras[state.currentTab] || [];
+  if (val.length === 0) {
+    dropdown.classList.add("hidden");
+    dropdown.innerHTML = "";
+    return;
+  }
+  // Resultado local (prioridade)
+  const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
+
+  // Resultado na nuvem (Google Drive)
+  dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
+  dropdown.classList.remove("hidden");
+  const filesNuvem = await searchDrive(val);
+
+  // Montar dropdown: local primeiro, depois nuvem (sem duplicar)
+  dropdown.innerHTML = "";
+
+  if (resultadosLocal.length) {
+    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
+    resultadosLocal.forEach(c => {
+      const li = document.createElement("li");
+      li.textContent = stripExtension(c.title);
+      li.onclick = () => {
+        // Seleciona/abre cifra local
+        // Você pode customizar a ação aqui!
+        // Exemplo: selecionar cifra, abrir modal, etc.
+        dropdown.classList.add("hidden");
+        document.getElementById("search-bar").value = "";
+        state.search = "";
+        renderCifras();
+      };
+      dropdown.appendChild(li);
+    });
+  }
+
+  // Filtra arquivos da nuvem que não estão já na aba (evita duplicar no dropdown)
+  const idsLocais = new Set(cifrasTab.map(c => c.id));
+  const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
+  if (filesNuvemFiltrados.length) {
+    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras na nuvem</li>`;
+    filesNuvemFiltrados.forEach(f => {
+      const li = document.createElement("li");
+      li.textContent = stripExtension(f.name);
+      li.onclick = () => {
+        addCifraFromDrive(f);
+        dropdown.classList.add("hidden");
+        document.getElementById("search-bar").value = "";
+        state.search = "";
+        renderCifras();
+      };
+      dropdown.appendChild(li);
+    });
+  }
+
+  if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
+    dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
+  }
+};
+
+document.getElementById("search-bar").onfocus = () => {
+  if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
+};
+
+document.getElementById("search-bar").onblur = () => setTimeout(() => {
+  document.getElementById("search-dropdown").classList.add("hidden");
+}, 200);
+
 // --- Search bar e dropdown de busca ---
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
