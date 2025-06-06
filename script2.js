@@ -456,6 +456,7 @@ async function searchDrive(query) {
 
 // --- Fullscreen ---
 function openFullscreen(cifra) {
+  console.log("URL recebida:", cifra);
   const overlay = document.getElementById("fullscreen-overlay");
   let fullscreenUrl;
   if (cifra.driveId) {
