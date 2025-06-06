@@ -465,8 +465,29 @@ function openFullscreen(cifra) {
       <img class="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
     </div>`;
   overlay.classList.remove("hidden");
-  overlay.querySelector(".close-fullscreen").onclick = () => overlay.classList.add("hidden");
-  overlay.onclick = e => { if (e.target === overlay) overlay.classList.add("hidden"); };
+  overlay.querySelector(".close-fullscreen").onclick = () => {
+    overlay.classList.add("hidden");
+    // Sai do fullscreen nativo se estiver ativo
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+  };
+  overlay.onclick = e => { 
+    if (e.target === overlay) {
+      overlay.classList.add("hidden");
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+    }
+  };
+  // Entrar em fullscreen nativo
+  if (overlay.requestFullscreen) {
+    overlay.requestFullscreen();
+  } else if (overlay.webkitRequestFullscreen) { /* Safari */
+    overlay.webkitRequestFullscreen();
+  } else if (overlay.msRequestFullscreen) { /* IE11 */
+    overlay.msRequestFullscreen();
+  }
 }
 
 // --- Upload para Google Drive ---
