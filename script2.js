@@ -467,7 +467,6 @@ function openFullscreen(cifra) {
   overlay.classList.remove("hidden");
   overlay.querySelector(".close-fullscreen").onclick = () => {
     overlay.classList.add("hidden");
-    // Sai do fullscreen nativo se estiver ativo
     if (document.fullscreenElement) {
       document.exitFullscreen();
     }
@@ -483,11 +482,104 @@ function openFullscreen(cifra) {
   // Entrar em fullscreen nativo
   if (overlay.requestFullscreen) {
     overlay.requestFullscreen();
-  } else if (overlay.webkitRequestFullscreen) { /* Safari */
+  } else if (overlay.webkitRequestFullscreen) {
     overlay.webkitRequestFullscreen();
-  } else if (overlay.msRequestFullscreen) { /* IE11 */
+  } else if (overlay.msRequestFullscreen) {
     overlay.msRequestFullscreen();
   }
+
+  // === Zoom e Pan ===
+  const img = overlay.querySelector(".fullscreen-img");
+  let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
+  let pinchStartDist = null, pinchStartScale = null;
+
+  // Mouse wheel zoom
+  img.onwheel = function(e) {
+    e.preventDefault();
+    const rect = img.getBoundingClientRect();
+    // Zoom focal point
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.max(0.5, Math.min(5, scale * delta));
+    img.style.transformOrigin = `${offsetX}px ${offsetY}px`;
+    img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+  };
+
+  // Mouse drag (pan)
+  img.onmousedown = function(e) {
+    isDragging = true;
+    startX = e.clientX - lastX;
+    startY = e.clientY - lastY;
+    e.preventDefault();
+  };
+  overlay.onmousemove = function(e) {
+    if (isDragging) {
+      lastX = e.clientX - startX;
+      lastY = e.clientY - startY;
+      img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+    }
+  };
+  overlay.onmouseup = function() { isDragging = false; };
+  overlay.onmouseleave = function() { isDragging = false; };
+
+  // Touch pinch zoom e pan
+  img.ontouchstart = function(e) {
+    if (e.touches.length === 2) {
+      pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      pinchStartScale = scale;
+    } else if (e.touches.length === 1) {
+      isDragging = true;
+      startX = e.touches[0].clientX - lastX;
+      startY = e.touches[0].clientY - lastY;
+    }
+  };
+  img.ontouchmove = function(e) {
+    if (e.touches.length === 2 && pinchStartDist) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      scale = Math.max(0.5, Math.min(5, pinchStartScale * dist / pinchStartDist));
+      img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+      e.preventDefault();
+    } else if (e.touches.length === 1 && isDragging) {
+      lastX = e.touches[0].clientX - startX;
+      lastY = e.touches[0].clientY - startY;
+      img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+      e.preventDefault();
+    }
+  };
+  img.ontouchend = function(e) {
+    if (e.touches.length < 2) {
+      pinchStartDist = null;
+      pinchStartScale = null;
+    }
+    if (e.touches.length === 0) {
+      isDragging = false;
+    }
+  };
+
+  // Duplo clique/double tap para resetar zoom
+  let lastTapTime = 0;
+  img.ondblclick = function(e) {
+    scale = 1; lastX = 0; lastY = 0;
+    img.style.transform = '';
+  };
+  img.ontouchend = function(e) {
+    if (e.touches.length === 0) {
+      const now = Date.now();
+      if (now - lastTapTime < 350) {
+        scale = 1; lastX = 0; lastY = 0;
+        img.style.transform = '';
+      }
+      lastTapTime = now;
+      isDragging = false;
+    }
+  };
 }
 
 // --- Upload para Google Drive ---
