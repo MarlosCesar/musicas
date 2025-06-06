@@ -458,12 +458,8 @@ async function searchDrive(query) {
 function openFullscreen(cifra) {
   console.log("URL recebida:", cifra);
   const overlay = document.getElementById("fullscreen-overlay");
-  let fullscreenUrl;
-  if (cifra.driveId) {
-    fullscreenUrl = `https://drive.usercontent.google.com/download?id=${cifra.driveId}`;
-  } else {
-    fullscreenUrl = cifra.url;
-  }
+  // Use sempre o campo url
+  let fullscreenUrl = cifra.url;
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper">
       <img class="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
