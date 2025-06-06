@@ -456,19 +456,13 @@ async function searchDrive(query) {
 
 // --- Fullscreen ---
 function openFullscreen(cifra) {
-  console.log("URL recebida:", cifra);
   const overlay = document.getElementById("fullscreen-overlay");
-  
-  // Determina a URL correta baseada na origem da imagem
   let fullscreenUrl;
   if (cifra.driveId) {
-    // Se for do Drive, usa a URL de visualização direta
     fullscreenUrl = `https://drive.google.com/uc?export=view&id=${cifra.driveId}`;
   } else {
-    // Se for local, usa a URL normal
     fullscreenUrl = cifra.url;
   }
-  
   overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper">
       <img class="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
