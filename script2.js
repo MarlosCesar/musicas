@@ -460,7 +460,7 @@ function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
   let fullscreenUrl;
   if (cifra.driveId) {
-    fullscreenUrl = `https://drive.google.com/uc?export=view&id=${cifra.driveId}`;
+    fullscreenUrl = `https://drive.usercontent.google.com/download?id=${cifra.driveId}`;
   } else {
     fullscreenUrl = cifra.url;
   }
