@@ -326,13 +326,12 @@ body {
 .fullscreen-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.95);
+  background: rgba(0,0,0,0.93);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 10000;
   flex-direction: column;
-  overflow: hidden;
 }
 .fullscreen-img-wrapper {
   width: 100vw;
@@ -340,51 +339,35 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  touch-action: none;   /* permite pinch-zoom no mobile */
-  overflow: hidden;
-  position: relative;
 }
 .fullscreen-overlay .fullscreen-img {
-  max-width: none;
-  max-height: none;
+  max-width: 100vw;
+  max-height: 100vh;
   width: auto;
   height: auto;
   object-fit: contain;
   background: #fff;
   display: block;
-  /* Suaviza o zoom/pan */
-  transition: transform 0.08s cubic-bezier(.4,0,.2,1);
-  user-select: none;
-  -webkit-user-drag: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  cursor: grab;
-  border-radius: 16px;
-  box-shadow: 0 2px 32px rgba(0,0,0,0.31);
   margin: 0 auto;
 }
-.fullscreen-overlay .fullscreen-img:active {
-  cursor: grabbing;
+.fullscreen-overlay .fullscreen-iframe {
+  width: 100vw;
+  height: 100vh;
+  border: none;
+  background: #fff;
 }
 .fullscreen-overlay .close-fullscreen {
   position: absolute;
-  top: 16px;
-  right: 18px;
-  font-size: 2.1rem;
-  background: rgba(30,30,30,0.8);
-  color: #fff;
+  top: 24px;
+  right: 34px;
+  font-size: 2.3rem;
+  color: var(--white);
+  background: none;
   border: none;
-  border-radius: 50%;
-  width: 44px;
-  height: 44px;
-  z-index: 2;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-  transition: background 0.2s;
-  opacity: 0.85;
+  opacity: 0.8;
+  z-index: 10001;
 }
-.fullscreen-overlay .close-fullscreen:hover {
-  background: rgba(60,60,60,1);
 .float-controls {
   position: fixed;
   bottom: 110px;
@@ -580,9 +563,4 @@ body {
     font-size: 1em;
     padding: 0.5em 1.1em;
   }
-}
-
-@media (max-width: 700px) {
-  .fullscreen-img-wrapper { width: 100vw; height: 100vh; }
-  .fullscreen-overlay .fullscreen-img { max-width: none; max-height: none; }
 }
