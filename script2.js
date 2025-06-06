@@ -456,6 +456,7 @@ async function searchDrive(query) {
 
 // --- Fullscreen ---
 function openFullscreen(cifra) {
+  console.log("URL recebida:", cifra);
   const overlay = document.getElementById("fullscreen-overlay");
   
   // Determina a URL correta baseada na origem da imagem
