@@ -566,14 +566,12 @@ function getProxiedUrl(originalUrl) {
 
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
-  let fullscreenUrl = getProxiedUrl(cifra.url); // <-- Aqui usamos o proxy!
-  console.log("URL usada na imagem fullscreen:", fullscreenUrl);
-  let isTextCifra = !!cifra.text;
+  let fullscreenUrl = getProxiedUrl(cifra.url);
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
       <img class="fullscreen-img" id="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
-      <div id="overlay-notes" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:10020;"></div>
+      <div id="overlay-notes" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:10020;display:none;"></div>
       <div id="tone-controls" class="fullscreen-tone-controls hidden">
         <button id="tone-down">-</button>
         <span class="tone-label" id="tone-value">0</span>
@@ -694,55 +692,20 @@ function openFullscreen(cifra) {
     }
   };
 
-  // ---- OCR e Overlay de Notas ----
+  // ---- OCR e Overlay de Notas (ativação por 3 cliques) ----
   const transpMsg = document.getElementById("transp-overlay-msg");
   const controls = document.getElementById("tone-controls");
   let currentTone = 0;
   let notesData = [];
+  let tripleClickTimer = null, tripleClickCount = 0, ocrActivated = false;
 
-  const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-  function normalizeNote(note) {
-    switch(note) {
-      case "Db": return "C#";
-      case "Eb": return "D#";
-      case "Gb": return "F#";
-      case "Ab": return "G#";
-      case "Bb": return "A#";
-      default: return note;
-    }
-  }
-  function transposeChord(chord, semitones) {
-    const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
-    const match = chord.match(regex);
-    if (!match) return chord;
-    let root = normalizeNote(match[1]);
-    let suffix = match[3] || "";
-    let bass = match[5] ? normalizeNote(match[5]) : null;
-    let idx = NOTES_SHARP.indexOf(root);
-    if (idx === -1) return chord;
-    let newIdx = (idx + semitones + 12) % 12;
-    let newRoot = NOTES_SHARP[newIdx];
-    let newBass = "";
-    if (bass) {
-      let idxBass = NOTES_SHARP.indexOf(bass);
-      if (idxBass !== -1) {
-        let newIdxBass = (idxBass + semitones + 12) % 12;
-        newBass = "/" + NOTES_SHARP[newIdxBass];
-      } else {
-        newBass = "/" + bass;
-      }
-    }
-    return `${newRoot}${suffix}${newBass}`;
-  }
-
+  // Cálculo de escala (para overlays)
   function renderOverlays() {
     overlayNotes.innerHTML = "";
-    // Pega o tamanho natural e exibido da imagem
     const naturalWidth = img.naturalWidth;
     const naturalHeight = img.naturalHeight;
     const displayWidth = img.width;
     const displayHeight = img.height;
-    // Fatores de escala para ajustar as coordenadas da Tesseract
     const scaleX = displayWidth / naturalWidth;
     const scaleY = displayHeight / naturalHeight;
     notesData.forEach(note => {
@@ -788,6 +751,7 @@ function openFullscreen(cifra) {
         transpMsg.querySelector("span").textContent = "Nenhuma nota reconhecida. Melhore a imagem ou tente outro idioma.";
         setTimeout(()=>{ transpMsg.style.display = "none"; }, 3000);
       } else {
+        overlayNotes.style.display = "";
         renderOverlays();
         transpMsg.style.display = "none";
         controls.classList.remove("hidden");
@@ -795,8 +759,43 @@ function openFullscreen(cifra) {
     });
   }
 
-  img.onload = detectNotes;
-  if (img.complete) detectNotes();
+  // Triplo clique/click/tap na imagem ativa OCR
+  function handleTripleClick() {
+    if (ocrActivated) return;
+    ocrActivated = true;
+    overlayNotes.style.display = "";
+    transpMsg.style.display = "";
+    detectNotes();
+  }
+
+  // Triplo clique mouse
+  img.addEventListener('click', function() {
+    tripleClickCount++;
+    if (tripleClickCount === 3) {
+      handleTripleClick();
+      tripleClickCount = 0;
+      clearTimeout(tripleClickTimer);
+    } else {
+      clearTimeout(tripleClickTimer);
+      tripleClickTimer = setTimeout(()=>{ tripleClickCount = 0; }, 500);
+    }
+  });
+
+  // Triplo toque/tap mobile
+  img.addEventListener('touchend', function(e) {
+    // Só conta se for toque único (não pinch)
+    if (e.touches.length === 0) {
+      tripleClickCount++;
+      if (tripleClickCount === 3) {
+        handleTripleClick();
+        tripleClickCount = 0;
+        clearTimeout(tripleClickTimer);
+      } else {
+        clearTimeout(tripleClickTimer);
+        tripleClickTimer = setTimeout(()=>{ tripleClickCount = 0; }, 700);
+      }
+    }
+  });
 
   // Controles de tonalidade
   document.getElementById("tone-up").onclick = () => {
