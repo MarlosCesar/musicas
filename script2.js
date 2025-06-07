@@ -663,7 +663,7 @@ function getProxiedUrl(originalUrl) {
 
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
-  let fullscreenUrl = getProxiedUrl(cifra.url);
+  let fullscreenUrl = getProxiedUrl(cifra.url); // <-- Aqui usamos o proxy!
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
@@ -783,6 +783,7 @@ function openFullscreen(cifra) {
   let currentTone = 0;
   let notesData = [];
 
+  // Função de transposição (cromática, com sufixos)
   const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   function normalizeNote(note) {
     switch(note) {
@@ -842,6 +843,7 @@ function openFullscreen(cifra) {
   function detectNotes() {
     transpMsg.style.display = "block";
     overlayNotes.innerHTML = "";
+    controls.classList.add("hidden");
     Tesseract.recognize(img.src, 'eng', {
       logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
     }).then(({ data }) => {
@@ -865,9 +867,21 @@ function openFullscreen(cifra) {
     });
   }
 
-  img.onload = detectNotes;
-  if (img.complete) detectNotes();
+  // Triplo clique para rodar o OCR
+  let clickCount = 0, clickTimer = null;
+  img.addEventListener('click', function() {
+    clickCount++;
+    if (clickCount === 3) {
+      clickCount = 0;
+      clearTimeout(clickTimer);
+      detectNotes();
+    } else {
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(()=>{ clickCount = 0; }, 700);
+    }
+  });
 
+  // Controles de tonalidade
   document.getElementById("tone-up").onclick = () => {
     currentTone++;
     document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
