@@ -1013,5 +1013,5 @@ window.onload = () => {
   loadState();
   renderTabs();
   setTab(state.currentTab);
-  startPolling();
+  if (typeof startPolling === "function") startPolling();
 };
