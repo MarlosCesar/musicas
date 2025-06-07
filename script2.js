@@ -573,12 +573,12 @@ function openFullscreen(cifra) {
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
       <img class="fullscreen-img" id="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
+      <div id="overlay-notes" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:10020;"></div>
       <div id="tone-controls" class="fullscreen-tone-controls hidden">
         <button id="tone-down">-</button>
         <span class="tone-label" id="tone-value">0</span>
         <button id="tone-up">+</button>
       </div>
-      <div id="overlay-notes"></div>
     </div>
     <div id="transp-overlay-msg" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;font-size:1.2em;color:#fff;text-shadow:0 2px 8px #000;display:none;">
       <span>Reconhecendo notas... Aguarde.</span>
@@ -599,6 +599,7 @@ function openFullscreen(cifra) {
 
   // === Zoom e Pan ===
   const img = document.getElementById("fullscreen-img");
+  const overlayNotes = document.getElementById("overlay-notes");
   let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
   let pinchStartDist = null, pinchStartScale = null;
   img.onwheel = function(e) {
@@ -610,6 +611,8 @@ function openFullscreen(cifra) {
     scale = Math.max(0.5, Math.min(5, scale * delta));
     img.style.transformOrigin = `${offsetX}px ${offsetY}px`;
     img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+    overlayNotes.style.transformOrigin = img.style.transformOrigin;
+    overlayNotes.style.transform = img.style.transform;
   };
   img.onmousedown = function(e) {
     isDragging = true;
@@ -622,6 +625,8 @@ function openFullscreen(cifra) {
       lastX = e.clientX - startX;
       lastY = e.clientY - startY;
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+      overlayNotes.style.transform = img.style.transform;
+      overlayNotes.style.transformOrigin = img.style.transformOrigin;
     }
   };
   overlay.onmouseup = function() { isDragging = false; };
@@ -647,11 +652,15 @@ function openFullscreen(cifra) {
       );
       scale = Math.max(0.5, Math.min(5, pinchStartScale * dist / pinchStartDist));
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+      overlayNotes.style.transform = img.style.transform;
+      overlayNotes.style.transformOrigin = img.style.transformOrigin;
       e.preventDefault();
     } else if (e.touches.length === 1 && isDragging) {
       lastX = e.touches[0].clientX - startX;
       lastY = e.touches[0].clientY - startY;
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
+      overlayNotes.style.transform = img.style.transform;
+      overlayNotes.style.transformOrigin = img.style.transformOrigin;
       e.preventDefault();
     }
   };
@@ -668,6 +677,8 @@ function openFullscreen(cifra) {
   img.ondblclick = function(e) {
     scale = 1; lastX = 0; lastY = 0;
     img.style.transform = '';
+    overlayNotes.style.transform = '';
+    overlayNotes.style.transformOrigin = '';
   };
   img.ontouchend = function(e) {
     if (e.touches.length === 0) {
@@ -675,6 +686,8 @@ function openFullscreen(cifra) {
       if (now - lastTapTime < 350) {
         scale = 1; lastX = 0; lastY = 0;
         img.style.transform = '';
+        overlayNotes.style.transform = '';
+        overlayNotes.style.transformOrigin = '';
       }
       lastTapTime = now;
       isDragging = false;
@@ -682,13 +695,11 @@ function openFullscreen(cifra) {
   };
 
   // ---- OCR e Overlay de Notas ----
-  const overlayNotes = document.getElementById("overlay-notes");
   const transpMsg = document.getElementById("transp-overlay-msg");
   const controls = document.getElementById("tone-controls");
   let currentTone = 0;
   let notesData = [];
 
-  // Função de transposição (cromática, com sufixos)
   const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   function normalizeNote(note) {
     switch(note) {
@@ -726,11 +737,21 @@ function openFullscreen(cifra) {
 
   function renderOverlays() {
     overlayNotes.innerHTML = "";
+    // Pega o tamanho natural e exibido da imagem
+    const naturalWidth = img.naturalWidth;
+    const naturalHeight = img.naturalHeight;
+    const displayWidth = img.width;
+    const displayHeight = img.height;
+    // Fatores de escala para ajustar as coordenadas da Tesseract
+    const scaleX = displayWidth / naturalWidth;
+    const scaleY = displayHeight / naturalHeight;
     notesData.forEach(note => {
       const div = document.createElement("div");
       div.style.position = "absolute";
-      div.style.left = `${note.bbox.x0}px`;
-      div.style.top = `${note.bbox.y0}px`;
+      div.style.left = `${note.bbox.x0 * scaleX}px`;
+      div.style.top = `${note.bbox.y0 * scaleY}px`;
+      div.style.width = `${(note.bbox.x1 - note.bbox.x0) * scaleX}px`;
+      div.style.height = `${(note.bbox.y1 - note.bbox.y0) * scaleY}px`;
       div.style.background = "#fff";
       div.style.color = "#222";
       div.style.fontWeight = "bold";
@@ -740,6 +761,9 @@ function openFullscreen(cifra) {
       div.style.boxShadow = "0 1px 2px #999";
       div.style.pointerEvents = "none";
       div.style.zIndex = "10020";
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.justifyContent = "center";
       div.textContent = transposeChord(note.text, currentTone);
       overlayNotes.appendChild(div);
     });
@@ -748,11 +772,9 @@ function openFullscreen(cifra) {
   function detectNotes() {
     transpMsg.style.display = "block";
     overlayNotes.innerHTML = "";
-    // Use o src da imagem (que já está proxificado) no Tesseract:
     Tesseract.recognize(img.src, 'eng', {
       logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
     }).then(({ data }) => {
-      console.log(data);
       notesData = [];
       (data.words||[]).forEach(wordObj => {
         if (/^[A-G][#b]?(m|sus|dim|aug|add|maj|min|[0-9]*)?$/i.test(wordObj.text.trim())) {
