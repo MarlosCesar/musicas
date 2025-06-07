@@ -4,52 +4,69 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Seu aplicativo de cifras"/>
-  <meta name="theme-color" content="#5c92f6"/>
+  <meta name="theme-color" content="#8b5cf6"/>
   <title>Cifras 2.0</title>
   <link rel="manifest" href="manifest2.json" />
   <link rel="icon" type="image/svg+xml" href="favicon2.svg" />
-  <link rel="stylesheet" href="style2.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" />
+  <link rel="stylesheet" href="style2.css" />
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 font-poppins min-h-screen">
   <div class="app-container">
-    <header class="header">
-      <div class="header-content">
-        <div class="logo">Cifras</div>
-        <div class="search-wrap">
-          <input id="search-bar" class="search-bar" type="search" placeholder="Buscar cifra..." autocomplete="off" />
-          <ul id="search-dropdown" class="search-dropdown hidden"></ul>
+    <!-- Header Moderno -->
+    <header class="sticky top-0 z-30 bg-white shadow-sm">
+      <div class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center">
+            <div class="text-purple-600 text-2xl font-bold logo">
+              Cifras <span class="bg-purple-600 text-white text-sm px-1 py-0.5 rounded">2.0</span>
+            </div>
+          </div>
+          <div class="flex items-center space-x-4">
+            <div class="relative search-wrap">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i class="fas fa-search text-gray-400"></i>
+              </div>
+              <input id="search-bar" class="search-bar pl-10 pr-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 w-56" type="search" placeholder="Buscar cifra..." autocomplete="off" />
+              <ul id="search-dropdown" class="search-dropdown hidden"></ul>
+            </div>
+          </div>
+        </div>
+        <!-- TABS -->
+        <div class="mt-4 pb-1 overflow-x-auto">
+          <nav id="tabs" class="tabs-container flex space-x-8 min-w-max" role="tablist"></nav>
         </div>
       </div>
     </header>
-    <nav id="tabs" class="tabs-container" role="tablist"></nav>
-    <div id="tab-scroll-left" class="tab-arrow left">&#8592;</div>
-    <div id="tab-scroll-right" class="tab-arrow right">&#8594;</div>
-    <main>
+    <main class="container mx-auto px-4 py-6 min-h-[80vh]">
       <section id="cifra-list-section" class="cifra-list-section">
-        <div id="empty-state" class="empty-state">
-          <svg width="120" height="120" fill="none" viewBox="0 0 120 120">
-            <rect width="120" height="120" rx="24" fill="#C4D4D4" fill-opacity="0.15"/>
-            <path d="M40 50v20a10 10 0 0 0 20 0V60h10v10a10 10 0 1 0 20 0V50a10 10 0 1 0-20 0v10H60V50a10 10 0 0 0-20 0z" fill="#6B8A8A"/>
-            <circle cx="60" cy="60" r="34" stroke="#6B8A8A" stroke-width="2"/>
-          </svg>
-          <div class="empty-text">Adicione sua primeira cifra</div>
+        <div id="empty-state" class="empty-state max-w-2xl mx-auto text-center py-16">
+          <div class="bg-gray-200 border-2 border-dashed rounded-xl w-16 h-16 mx-auto mb-6 flex items-center justify-center">
+            <i class="fas fa-music text-gray-500 text-xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-gray-700 mb-2">Adicione sua primeira cifra</h3>
+          <p class="text-gray-500 mb-8">Comece importando ou criando uma nova cifra para iniciar sua coleção</p>
+          <!--<button id="fab-buscar" class="w-12 h-12 rounded-full bg-purple-600 text-white flex items-center justify-center shadow hover:bg-purple-700 transition">
+            <i class="fas fa-plus"></i>
+          </button> -->
         </div>
-        <ul id="cifra-list" class="cifra-list"></ul>
+        <ul id="cifra-list" class="cifra-list max-w-4xl mx-auto mt-8"></ul>
       </section>
       <div id="float-controls" class="float-controls hidden">
-        <button id="select-all-btn" title="Selecionar todas"><span>&#9745;</span></button>
-        <button id="clear-selection-btn" title="Limpar seleção"><span>&#10006;</span></button>
-        <button id="delete-selected-btn" title="Excluir selecionadas"><span>&#128465;</span></button>
-        <button id="rename-selected-btn" title="Renomear selecionada" class="hidden"><span>&#9998;</span></button>
-        <button id="upload-selected-btn" title="Upload para Drive" class="hidden"><span>&#11014;</span></button>
+        <button id="select-all-btn" title="Selecionar todas"><i class="fas fa-check-double"></i></button>
+        <button id="clear-selection-btn" title="Limpar seleção"><i class="fas fa-eraser"></i></button>
+        <button id="delete-selected-btn" title="Excluir selecionadas"><i class="fas fa-trash"></i></button>
+        <button id="rename-selected-btn" title="Renomear selecionada" class="hidden"><i class="fas fa-pen"></i></button>
+        <button id="upload-selected-btn" title="Upload para Drive" class="hidden"><i class="fas fa-cloud-upload-alt"></i></button>
       </div>
+      <!-- FAB -->
       <button id="fab" class="fab" aria-label="Adicionar ou buscar cifra"><i class="fas fa-plus"></i></button>
+      <!-- FAB Menu -->
       <div id="fab-menu" class="fab-menu hidden">
         <button id="fab-buscar2" class="fab-menu-btn"><i class="fas fa-upload"></i> Importar imagem</button>
-        <button id="fab-camera" class="fab-menu-btn"><i class="fas fa-camera"></i> Tirar foto</button>
+        <button id="fab-camera" class="fab-menu-btn"><i class="fas fa-camera"></i> Tirar Foto</button>
         <button id="fab-upload" class="fab-menu-btn"><i class="fas fa-cloud-upload-alt"></i> Enviar p/ Nuvem</button>
       </div>
       <input id="file-input" type="file" class="hidden" accept="image/*" multiple />
@@ -60,6 +77,15 @@
           <h2>Cifras na Nuvem</h2>
           <div id="cloud-list" class="cloud-list"></div>
           <button id="add-cloud-btn" class="add-btn">Adicionar Selecionadas</button>
+        </div>
+      </div>
+      <!-- Modal para adicionar nova aba -->
+      <div id="add-tab-modal" class="modal hidden" role="dialog" aria-modal="true">
+        <div class="modal-content">
+          <button id="close-add-tab-modal" class="close-modal" aria-label="Fechar">&times;</button>
+          <h2>Nova Aba</h2>
+          <input id="add-tab-name" type="text" placeholder="Nome da nova aba" />
+          <button id="save-add-tab-btn" class="add-btn">Adicionar</button>
         </div>
       </div>
       <div id="fullscreen-overlay" class="fullscreen-overlay hidden"></div>
