@@ -559,32 +559,35 @@ async function searchDrive(query) {
   return data.files || [];
 }
 
-// --- Fullscreen ---
 function openFullscreen(cifra) {
-  console.log("URL recebida:", cifra);
   const overlay = document.getElementById("fullscreen-overlay");
-  // Use sempre o campo url
   let fullscreenUrl = cifra.url;
-  overlay.innerHTML = `<button class="close-fullscreen">&times;</button>
-    <div class="fullscreen-img-wrapper">
+  overlay.innerHTML = `
+    <button class="close-fullscreen">&times;</button>
+    <div class="fullscreen-img-wrapper" style="position:relative;">
       <img class="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
-    </div>`;
+      <div id="tone-controls" class="fullscreen-tone-controls hidden">
+        <button id="tone-down">-</button>
+        <span class="tone-label" id="tone-value">0</span>
+        <button id="tone-up">+</button>
+      </div>
+    </div>
+    <div id="transp-overlay-msg" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;font-size:1.2em;color:#fff;text-shadow:0 2px 8px #000;display:none;">
+      <span>Transposição automática só disponível para cifras em texto.<br>Para imagens, converta para texto para usar esta função.</span>
+    </div>
+  `;
   overlay.classList.remove("hidden");
+
   overlay.querySelector(".close-fullscreen").onclick = () => {
     overlay.classList.add("hidden");
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    }
+    if (document.fullscreenElement) document.exitFullscreen();
   };
   overlay.onclick = e => { 
     if (e.target === overlay) {
       overlay.classList.add("hidden");
-      if (document.fullscreenElement) {
-        document.exitFullscreen();
-      }
+      if (document.fullscreenElement) document.exitFullscreen();
     }
   };
-  // Entrar em fullscreen nativo
   if (overlay.requestFullscreen) {
     overlay.requestFullscreen();
   } else if (overlay.webkitRequestFullscreen) {
@@ -602,7 +605,6 @@ function openFullscreen(cifra) {
   img.onwheel = function(e) {
     e.preventDefault();
     const rect = img.getBoundingClientRect();
-    // Zoom focal point
     const offsetX = e.clientX - rect.left;
     const offsetY = e.clientY - rect.top;
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -684,6 +686,41 @@ function openFullscreen(cifra) {
       lastTapTime = now;
       isDragging = false;
     }
+  };
+
+  // ---- NOVO: TRIPLO CLIQUE E CONTROLES DE TONALIDADE ----
+  let clickCount = 0, clickTimer = null;
+  const controls = overlay.querySelector("#tone-controls");
+  const toneValue = overlay.querySelector("#tone-value");
+  const transpMsg = overlay.querySelector("#transp-overlay-msg");
+  let currentTone = 0;
+
+  img.addEventListener('click', function() {
+    clickCount++;
+    if (clickCount === 3) {
+      controls.classList.remove("hidden");
+      transpMsg.style.display = "block";
+      setTimeout(()=>{ transpMsg.style.display = "none"; }, 4000);
+      clickCount = 0;
+      clearTimeout(clickTimer);
+    } else {
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(()=>{ clickCount = 0; }, 500);
+    }
+  });
+
+  // Botões de tonalidade (apenas UI)
+  overlay.querySelector("#tone-up").onclick = () => {
+    currentTone++;
+    toneValue.textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
+    transpMsg.style.display = "block";
+    setTimeout(()=>{ transpMsg.style.display = "none"; }, 2500);
+  };
+  overlay.querySelector("#tone-down").onclick = () => {
+    currentTone--;
+    toneValue.textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
+    transpMsg.style.display = "block";
+    setTimeout(()=>{ transpMsg.style.display = "none"; }, 2500);
   };
 }
 
