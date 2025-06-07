@@ -194,13 +194,11 @@ function renderCifras() {
       const img = document.createElement("img");
       img.className = "cifra-img";
       
-      // Corrige a URL para imagens do Drive
       if (cifra.driveId) {
         img.src = `https://drive.google.com/thumbnail?id=${cifra.driveId}&sz=w200`;
       } else {
         img.src = cifra.url;
       }
-      
       img.alt = cifra.title;
       img.onclick = e => { openFullscreen(cifra); e.stopPropagation(); };
 
@@ -311,19 +309,24 @@ function showRenameModal(cifraId) {
   modal.querySelector("#close-rename-modal").onclick = () => document.body.removeChild(modal);
 }
 
-// --- FAB menu ---
-document.getElementById("fab").onclick = () => {
-  document.getElementById("fab-menu").classList.toggle("hidden");
+// --- FAB menu (ajuste para dois FABs) ---
+const fabBuscar = document.getElementById("fab-buscar");
+if (fabBuscar) fabBuscar.onclick = () => {
+  document.getElementById("file-input").click();
 };
-
-document.getElementById("fab-buscar").onclick = () => {
+const fabBuscar2 = document.getElementById("fab-buscar2");
+if (fabBuscar2) fabBuscar2.onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
 };
 
+document.getElementById("fab").onclick = () => {
+  document.getElementById("fab-menu").classList.toggle("hidden");
+};
+
 document.getElementById("fab-camera").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
-  document.getElementById("fab-camera").onclick = openCameraCapture;
+  openCameraCapture();
 };
 
 document.getElementById("fab-upload").onclick = async () => {
@@ -341,7 +344,7 @@ document.getElementById("fab-upload").onclick = async () => {
   toast("Upload realizado para o Google Drive!");
 };
 
-// --- File input upload (ALTERAÇÃO PARA BASE64) ---
+// --- File input upload (BASE64) ---
 document.getElementById("file-input").onchange = async (e) => {
   const files = Array.from(e.target.files || []);
   const tab = state.currentTab;
@@ -349,7 +352,7 @@ document.getElementById("file-input").onchange = async (e) => {
   let addedCount = 0;
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue;
-    const base64 = await fileToBase64(file); // Usa base64!
+    const base64 = await fileToBase64(file);
     const id = Math.random().toString(36).slice(2) + Date.now();
     state.cifras[tab].push({ id, url: base64, title: file.name });
     addedCount++;
@@ -359,7 +362,7 @@ document.getElementById("file-input").onchange = async (e) => {
   toast(`${addedCount} cifra(s) adicionada(s)!`);
 };
 
-// --- Camera Capture (ALTERAÇÃO PARA BASE64) ---
+// --- Camera Capture (BASE64) ---
 async function openCameraCapture() {
   let overlay = document.getElementById("camera-capture-overlay");
   if (overlay) overlay.remove();
@@ -368,7 +371,6 @@ async function openCameraCapture() {
   overlay.style.cssText = `
     z-index: 99999; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center;
   `;
-
   overlay.innerHTML = `
     <video id="camera-video" autoplay playsinline style="width:100vw; height:100vh; object-fit:cover; background:#222"></video>
     <div style="margin:1em 0">
@@ -404,7 +406,6 @@ async function openCameraCapture() {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    // Salvar como base64
     const base64 = canvas.toDataURL("image/jpeg", 0.92);
 
     if (stream) stream.getTracks().forEach(track => track.stop());
@@ -437,22 +438,18 @@ function buscaCifrasLocal(query, cifrasTab) {
   const resultado = [];
   const usados = new Set();
 
-  // 1. Começa com o texto digitado
   cifrasTab.filter(c => c.title.toLowerCase().startsWith(q))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
 
-  // 2. É igual ao texto digitado
   cifrasTab.filter(c => c.title.toLowerCase() === q && !usados.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
 
-  // 3. Ordem alfabética (restante)
   cifrasTab.filter(c => !usados.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
 
-  // 4. Contém o texto em qualquer parte (mas não nas opções anteriores)
   cifrasTab.filter(c => c.title.toLowerCase().includes(q) && !usados.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
@@ -460,29 +457,25 @@ function buscaCifrasLocal(query, cifrasTab) {
   return resultado.slice(0, 20);
 }
 
-// --- Substitua o bloco de busca do search-bar pelo abaixo ---
+// --- Busca com dropdown ---
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
   renderCifras();
 
   const dropdown = document.getElementById("search-dropdown");
-  // Busca local nas cifras da aba atual
   const cifrasTab = state.cifras[state.currentTab] || [];
   if (val.length === 0) {
     dropdown.classList.add("hidden");
     dropdown.innerHTML = "";
     return;
   }
-  // Resultado local (prioridade)
   const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
 
-  // Resultado na nuvem (Google Drive)
   dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
   dropdown.classList.remove("hidden");
   const filesNuvem = await searchDrive(val);
 
-  // Montar dropdown: local primeiro, depois nuvem (sem duplicar)
   dropdown.innerHTML = "";
 
   if (resultadosLocal.length) {
@@ -491,9 +484,6 @@ document.getElementById("search-bar").oninput = async (e) => {
       const li = document.createElement("li");
       li.textContent = stripExtension(c.title);
       li.onclick = () => {
-        // Seleciona/abre cifra local
-        // Você pode customizar a ação aqui!
-        // Exemplo: selecionar cifra, abrir modal, etc.
         dropdown.classList.add("hidden");
         document.getElementById("search-bar").value = "";
         state.search = "";
@@ -503,7 +493,6 @@ document.getElementById("search-bar").oninput = async (e) => {
     });
   }
 
-  // Filtra arquivos da nuvem que não estão já na aba (evita duplicar no dropdown)
   const idsLocais = new Set(cifrasTab.map(c => c.id));
   const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
   if (filesNuvemFiltrados.length) {
@@ -540,15 +529,12 @@ function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
   if (state.cifras[tab].some(c => c.id === file.id)) return;
-  
-  // URL corrigida para imagens do Drive
   const driveUrl = `https://drive.google.com/thumbnail?id=${file.id}&sz=w1000`;
-  
   state.cifras[tab].push({
     id: file.id,
     title: file.name,
     url: driveUrl,
-    driveId: file.id // Armazena o ID do Drive para referência
+    driveId: file.id
   });
   saveState();
   renderCifras();
@@ -567,7 +553,6 @@ async function searchDrive(query) {
 
 // --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
 function getProxiedUrl(originalUrl) {
-  // Não usar proxy para base64 ou blob!
   if (originalUrl.startsWith('data:') || originalUrl.startsWith('blob:')) {
     return originalUrl;
   }
@@ -576,9 +561,7 @@ function getProxiedUrl(originalUrl) {
 
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
-  let fullscreenUrl = getProxiedUrl(cifra.url); // Usa proxy só se for URL externa
-  console.log("URL usada na imagem fullscreen:", fullscreenUrl);
-  let isTextCifra = !!cifra.text;
+  let fullscreenUrl = getProxiedUrl(cifra.url);
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
@@ -698,7 +681,6 @@ function openFullscreen(cifra) {
   let currentTone = 0;
   let notesData = [];
 
-  // Função de transposição (cromática, com sufixos)
   const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   function normalizeNote(note) {
     switch(note) {
@@ -758,11 +740,9 @@ function openFullscreen(cifra) {
   function detectNotes() {
     transpMsg.style.display = "block";
     overlayNotes.innerHTML = "";
-    // Use o src da imagem (que já está proxificado) no Tesseract:
     Tesseract.recognize(img.src, 'eng', {
       logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
     }).then(({ data }) => {
-      console.log(data);
       notesData = [];
       (data.words||[]).forEach(wordObj => {
         if (/^[A-G][#b]?(m|sus|dim|aug|add|maj|min|[0-9]*)?$/i.test(wordObj.text.trim())) {
@@ -786,7 +766,6 @@ function openFullscreen(cifra) {
   img.onload = detectNotes;
   if (img.complete) detectNotes();
 
-  // Controles de tonalidade
   document.getElementById("tone-up").onclick = () => {
     currentTone++;
     document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
@@ -803,20 +782,16 @@ function openFullscreen(cifra) {
 async function uploadCifraToDrive(cifra) {
   await gapiAuth();
 
-  // Obter o arquivo (Blob) a partir da URL local ou remota
   let fileBlob;
-  if (cifra.url.startsWith('blob:')) {
-    // Arquivo local (foto/captura/upload)
+  if (cifra.url.startsWith('blob:') || cifra.url.startsWith('data:')) {
     fileBlob = await fetch(cifra.url).then(r => r.blob());
   } else {
-    // Imagem remota (ex: Google Drive, proxy)
     fileBlob = await fetch(cifra.url).then(r => r.blob());
   }
 
   const metadata = {
     name: cifra.title,
     mimeType: fileBlob.type || "image/jpeg"
-    // Se quiser, adicione 'parents: [FOLDER_ID]' para subir em uma pasta
   };
 
   const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
@@ -899,7 +874,9 @@ function showAddTabModal() {
   document.getElementById("add-tab-name").value = "";
   document.getElementById("save-add-tab-btn").onclick = () => {
     const name = document.getElementById("add-tab-name").value.trim();
-    const privacy = document.querySelector('input[name="tab-privacy"]:checked').value;
+    let privacy = "public";
+    const priv = document.querySelector('input[name="tab-privacy"]:checked');
+    if (priv) privacy = priv.value;
     if (name) {
       addTab(name, privacy);
       modal.classList.add("hidden");
@@ -907,20 +884,6 @@ function showAddTabModal() {
   };
   document.getElementById("close-add-tab-modal").onclick = () => modal.classList.add("hidden");
 }
-
-// --- Modal: modo da aba ---
-//function showTabModeModal(tab) {
- // const modal = document.getElementById("tab-mode-modal");
-//  modal.classList.remove("hidden");
-//  const radios = modal.querySelectorAll('input[name="tab-mode"]');
-  //radios.forEach(r => r.checked = (r.value === (tab.mode || "offline")));
-  //document.getElementById("save-tab-mode-btn").onclick = () => {
-    //const mode = modal.querySelector('input[name="tab-mode"]:checked').value;
-    //setTabMode(tab.name, mode);
-    //modal.classList.add("hidden");
-  //};
-  //document.getElementById("close-tab-mode-modal").onclick = () => modal.classList.add("hidden");
-//}
 
 // --- Modal: nuvem ---
 function showCloudModal(files=[]) {
@@ -1025,7 +988,6 @@ function abrirCifraTextoFullscreen() {
   const cifraOriginal = document.getElementById("cifra-texto-bloco").innerText;
   let currentTransposition = 0;
 
-  // Overlay fullscreen
   const overlay = document.getElementById("fullscreen-overlay");
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
@@ -1041,14 +1003,12 @@ function abrirCifraTextoFullscreen() {
   `;
   overlay.classList.remove("hidden");
 
-  // Render cifra transposta
   function atualizarCifraTexto() {
     overlay.querySelector("#cifra-texto-full").innerHTML = transposeTextCifra(cifraOriginal, currentTransposition);
     overlay.querySelector("#tone-value-text").textContent = currentTransposition > 0 ? `+${currentTransposition}` : currentTransposition;
   }
   atualizarCifraTexto();
 
-  // Fechar
   overlay.querySelector(".close-fullscreen").onclick = () => {
     overlay.classList.add("hidden");
     if (document.fullscreenElement) document.exitFullscreen();
@@ -1061,7 +1021,6 @@ function abrirCifraTextoFullscreen() {
   };
   if (overlay.requestFullscreen) overlay.requestFullscreen();
 
-  // Triplo clique para mostrar controles
   let clickCount = 0, clickTimer = null;
   const pre = overlay.querySelector("#cifra-texto-full");
   const controls = overlay.querySelector("#tone-controls-text");
@@ -1077,7 +1036,6 @@ function abrirCifraTextoFullscreen() {
     }
   });
 
-  // Controles de transposição
   overlay.querySelector("#tone-up-text").onclick = () => {
     currentTransposition++;
     atualizarCifraTexto();
