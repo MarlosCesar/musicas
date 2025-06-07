@@ -62,18 +62,19 @@ body {
 
 .search-bar {
   background: var(--primary-xlight);
-  border: none;
-  border-radius: var(--radius); /* Volta para a variável global */
-  padding: 12px 20px 12px 44px; /* Volta o padding da esquerda para 44px, como antes */
+  border: 2px solid #8b5cf6;      /* Adiciona contorno */
+  border-radius: var(--radius);
+  padding: 12px 20px 12px 20px;   /* Remove espaço da lupa à esquerda */
   width: 100%;
   font-size: 1.12rem;
   color: var(--primary);
   outline: none;
   box-sizing: border-box;
   margin-bottom: 6px;
-  background-image: url('data:image/svg+xml;utf8,<svg width="22" height="22" fill="none" stroke="%231a202c" stroke-width="2" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="7"/><path d="M15 15l4 4"/></svg>');
-  background-repeat: no-repeat;
-  background-position: 12px center;
+  background-image: none;         /* Remove a lupa */
+}
+.search-bar:focus {
+  border-color: var(--accent, #ff6d39); /* Destaca o contorno no foco */
 }
 
 .search-dropdown {
