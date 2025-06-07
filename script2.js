@@ -434,7 +434,7 @@ document.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById("fab-buscar")?.addEventListener('click', () => {
+document.getElementById("fab-buscar2")?.addEventListener('click', () => {
   document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
 });
