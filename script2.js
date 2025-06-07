@@ -872,6 +872,114 @@ function startPolling() {
   }, POLL_INTERVAL);
 }
 
+// --- Algoritmo de transposição para cifra em texto ---
+const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function normalizeNote(note) {
+  switch(note) {
+    case "Db": return "C#";
+    case "Eb": return "D#";
+    case "Gb": return "F#";
+    case "Ab": return "G#";
+    case "Bb": return "A#";
+    default: return note;
+  }
+}
+function transposeChord(chord, semitones) {
+  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?$/;
+  const match = chord.match(regex);
+  if (!match) return chord;
+  let root = normalizeNote(match[1]);
+  let suffix = match[3] || "";
+  let bass = match[5] ? normalizeNote(match[5]) : null;
+  let idx = NOTES_SHARP.indexOf(root);
+  if (idx === -1) return chord;
+  let newIdx = (idx + semitones + 12) % 12;
+  let newRoot = NOTES_SHARP[newIdx];
+  let newBass = "";
+  if (bass) {
+    let idxBass = NOTES_SHARP.indexOf(bass);
+    if (idxBass !== -1) {
+      let newIdxBass = (idxBass + semitones + 12) % 12;
+      newBass = "/" + NOTES_SHARP[newIdxBass];
+    } else {
+      newBass = "/" + bass;
+    }
+  }
+  return `<span class="nota-sobreposta">${newRoot}${suffix}${newBass}</span>`;
+}
+function transposeTextCifra(text, semitones) {
+  const chordRegex = /\b([A-G](#|b)?([a-z0-9º°+\-\(\)]*)?(\/[A-G](#|b)?)?)\b/g;
+  return text.replace(chordRegex, (match) => transposeChord(match, semitones));
+}
+
+// --- FULLSCREEN PARA CIFRA DE TEXTO ---
+function abrirCifraTextoFullscreen() {
+  const cifraOriginal = document.getElementById("cifra-texto-bloco").innerText;
+  let currentTransposition = 0;
+
+  // Overlay fullscreen
+  const overlay = document.getElementById("fullscreen-overlay");
+  overlay.innerHTML = `
+    <button class="close-fullscreen">&times;</button>
+    <div style="position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;">
+      <pre id="cifra-texto-full" style="font-size:1.1em;max-width:90vw;max-height:80vh;overflow:auto;background:#fff;color:#222;padding:25px 18px 18px 18px;border-radius:12px;box-shadow:0 2px 16px #0002;">
+      </pre>
+      <div id="tone-controls-text" class="fullscreen-tone-controls hidden">
+        <button id="tone-down-text">-</button>
+        <span class="tone-label" id="tone-value-text">0</span>
+        <button id="tone-up-text">+</button>
+      </div>
+    </div>
+  `;
+  overlay.classList.remove("hidden");
+
+  // Render cifra transposta
+  function atualizarCifraTexto() {
+    overlay.querySelector("#cifra-texto-full").innerHTML = transposeTextCifra(cifraOriginal, currentTransposition);
+    overlay.querySelector("#tone-value-text").textContent = currentTransposition > 0 ? `+${currentTransposition}` : currentTransposition;
+  }
+  atualizarCifraTexto();
+
+  // Fechar
+  overlay.querySelector(".close-fullscreen").onclick = () => {
+    overlay.classList.add("hidden");
+    if (document.fullscreenElement) document.exitFullscreen();
+  };
+  overlay.onclick = e => { 
+    if (e.target === overlay) {
+      overlay.classList.add("hidden");
+      if (document.fullscreenElement) document.exitFullscreen();
+    }
+  };
+  if (overlay.requestFullscreen) overlay.requestFullscreen();
+
+  // Triplo clique para mostrar controles
+  let clickCount = 0, clickTimer = null;
+  const pre = overlay.querySelector("#cifra-texto-full");
+  const controls = overlay.querySelector("#tone-controls-text");
+  pre.addEventListener('click', function() {
+    clickCount++;
+    if (clickCount === 3) {
+      controls.classList.remove("hidden");
+      clickCount = 0;
+      clearTimeout(clickTimer);
+    } else {
+      clearTimeout(clickTimer);
+      clickTimer = setTimeout(()=>{ clickCount = 0; }, 500);
+    }
+  });
+
+  // Controles de transposição
+  overlay.querySelector("#tone-up-text").onclick = () => {
+    currentTransposition++;
+    atualizarCifraTexto();
+  };
+  overlay.querySelector("#tone-down-text").onclick = () => {
+    currentTransposition--;
+    atualizarCifraTexto();
+  };
+}
+
 // --- Startup ---
 window.onload = () => {
   loadState();
