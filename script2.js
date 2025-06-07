@@ -501,7 +501,9 @@ async function openCameraCapture() {
 
   let stream = null;
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream = await navigator.mediaDevices.getUserMedia({
+  video: { facingMode: { exact: "environment" } }
+});
     video.srcObject = stream;
   } catch (e) {
     overlay.remove();
