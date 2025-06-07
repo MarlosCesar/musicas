@@ -743,22 +743,28 @@ function openFullscreen(cifra) {
   function detectNotes() {
     transpMsg.style.display = "block";
     overlayNotes.innerHTML = "";
-    Tesseract.recognize(img.src, 'por', {
-      logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
-    }).then(({ data }) => {
-      notesData = [];
-      (data.words||[]).forEach(wordObj => {
-        if (/^[A-G][#b]?(m|sus|dim|aug|add|maj|min|7|9|11|13)?$/.test(wordObj.text)) {
-          notesData.push({
-            text: wordObj.text,
-            bbox: wordObj.bbox
-          });
-        }
+    Tesseract.recognize(img.src, 'eng', {
+  logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
+}).then(({ data }) => {
+  console.log(data);
+  notesData = [];
+  (data.words||[]).forEach(wordObj => {
+    if (/^[A-G][#b]?(m|sus|dim|aug|add|maj|min|[0-9]*)?$/i.test(wordObj.text.trim())) {
+      notesData.push({
+        text: wordObj.text.trim(),
+        bbox: wordObj.bbox
       });
-      renderOverlays();
-      transpMsg.style.display = "none";
-      controls.classList.remove("hidden");
-    });
+    }
+  });
+  if (notesData.length === 0) {
+    transpMsg.querySelector("span").textContent = "Nenhuma nota reconhecida. Melhore a imagem ou tente outro idioma.";
+    setTimeout(()=>{ transpMsg.style.display = "none"; }, 3000);
+  } else {
+    renderOverlays();
+    transpMsg.style.display = "none";
+    controls.classList.remove("hidden");
+  }
+});
   }
 
   img.onload = detectNotes;
