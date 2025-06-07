@@ -28,7 +28,29 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
-function gapiAuth() {
+function waitForGapi() {
+  return new Promise((resolve, reject) => {
+    if (window.gapi) return resolve();
+    if (window._gapiLoading) {
+      const interval = setInterval(() => {
+        if (window.gapi) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 50);
+      return;
+    }
+    window._gapiLoading = true;
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error('Falha ao carregar gapi'));
+    document.head.appendChild(script);
+  });
+}
+
+async function gapiAuth() {
+  await waitForGapi();
   return new Promise((resolve, reject) => {
     gapi.load('client:auth2', async () => {
       await gapi.client.init({
