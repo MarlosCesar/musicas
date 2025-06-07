@@ -453,33 +453,31 @@ body {
   background: var(--primary-xlight);
   color: var(--accent);
 }
+.tab {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+}
 .tab .tab-close {
   position: absolute;
-  right: 6px;
-  top: 5px;
+  right: 4px;
+  top: 4px;
   background: none;
   border: none;
   color: #e83c4c;
-  font-size: 1.25em;
+  font-size: 0.95em; /* ou 1em */
   font-weight: bold;
   cursor: pointer;
   z-index: 10;
-  opacity: 0.85;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   transition: opacity 0.15s;
-  padding: 0 2px;
 }
-.tab .tab-close:active { opacity: 1; }
-.tab input {
-  font-family: inherit;
-  font-size: 1em;
-  background: var(--primary-xlight);
-  border-radius: 8px;
-  border: none;
-  outline: 2px solid var(--accent);
-  padding: 4px 8px;
-  min-width: 80px;
-  max-width: 160px;
-}
-.tab input:focus {
-  outline: 2px solid var(--accent-hover);
+.tab.custom:hover .tab-close,
+.tab.custom.tab-show-x .tab-close {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
