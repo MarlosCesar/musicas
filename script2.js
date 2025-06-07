@@ -934,6 +934,7 @@ function openFullscreen(cifra) {
 }
 
 // Ao criar overlay em fullscreen:
+const overlay = document.getElementById("fullscreen-overlay");
 const closeBtn = overlay.querySelector('.close-fullscreen');
 closeBtn.classList.remove('visible');
 img.addEventListener('click', function() {
