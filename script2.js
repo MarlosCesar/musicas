@@ -559,25 +559,27 @@ async function searchDrive(query) {
   return data.files || [];
 }
 
+// --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
   let fullscreenUrl = cifra.url;
+  let isTextCifra = !!cifra.text; // Se no futuro você quiser abrir cifras texto daqui!
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
-      <img class="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
+      <img class="fullscreen-img" id="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
       <div id="tone-controls" class="fullscreen-tone-controls hidden">
         <button id="tone-down">-</button>
         <span class="tone-label" id="tone-value">0</span>
         <button id="tone-up">+</button>
       </div>
+      <div id="overlay-notes"></div>
     </div>
     <div id="transp-overlay-msg" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;font-size:1.2em;color:#fff;text-shadow:0 2px 8px #000;display:none;">
-      <span>Transposição automática só disponível para cifras em texto.<br>Para imagens, converta para texto para usar esta função.</span>
+      <span>Reconhecendo notas... Aguarde.</span>
     </div>
   `;
   overlay.classList.remove("hidden");
-
   overlay.querySelector(".close-fullscreen").onclick = () => {
     overlay.classList.add("hidden");
     if (document.fullscreenElement) document.exitFullscreen();
@@ -588,20 +590,12 @@ function openFullscreen(cifra) {
       if (document.fullscreenElement) document.exitFullscreen();
     }
   };
-  if (overlay.requestFullscreen) {
-    overlay.requestFullscreen();
-  } else if (overlay.webkitRequestFullscreen) {
-    overlay.webkitRequestFullscreen();
-  } else if (overlay.msRequestFullscreen) {
-    overlay.msRequestFullscreen();
-  }
+  if (overlay.requestFullscreen) overlay.requestFullscreen();
 
   // === Zoom e Pan ===
-  const img = overlay.querySelector(".fullscreen-img");
+  const img = document.getElementById("fullscreen-img");
   let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
   let pinchStartDist = null, pinchStartScale = null;
-
-  // Mouse wheel zoom
   img.onwheel = function(e) {
     e.preventDefault();
     const rect = img.getBoundingClientRect();
@@ -612,8 +606,6 @@ function openFullscreen(cifra) {
     img.style.transformOrigin = `${offsetX}px ${offsetY}px`;
     img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
   };
-
-  // Mouse drag (pan)
   img.onmousedown = function(e) {
     isDragging = true;
     startX = e.clientX - lastX;
@@ -629,8 +621,6 @@ function openFullscreen(cifra) {
   };
   overlay.onmouseup = function() { isDragging = false; };
   overlay.onmouseleave = function() { isDragging = false; };
-
-  // Touch pinch zoom e pan
   img.ontouchstart = function(e) {
     if (e.touches.length === 2) {
       pinchStartDist = Math.hypot(
@@ -669,8 +659,6 @@ function openFullscreen(cifra) {
       isDragging = false;
     }
   };
-
-  // Duplo clique/double tap para resetar zoom
   let lastTapTime = 0;
   img.ondblclick = function(e) {
     scale = 1; lastX = 0; lastY = 0;
@@ -688,39 +676,104 @@ function openFullscreen(cifra) {
     }
   };
 
-  // ---- NOVO: TRIPLO CLIQUE E CONTROLES DE TONALIDADE ----
-  let clickCount = 0, clickTimer = null;
-  const controls = overlay.querySelector("#tone-controls");
-  const toneValue = overlay.querySelector("#tone-value");
-  const transpMsg = overlay.querySelector("#transp-overlay-msg");
+  // ---- OCR e Overlay de Notas ----
+  const overlayNotes = document.getElementById("overlay-notes");
+  const transpMsg = document.getElementById("transp-overlay-msg");
+  const controls = document.getElementById("tone-controls");
   let currentTone = 0;
+  let notesData = [];
 
-  img.addEventListener('click', function() {
-    clickCount++;
-    if (clickCount === 3) {
-      controls.classList.remove("hidden");
-      transpMsg.style.display = "block";
-      setTimeout(()=>{ transpMsg.style.display = "none"; }, 4000);
-      clickCount = 0;
-      clearTimeout(clickTimer);
-    } else {
-      clearTimeout(clickTimer);
-      clickTimer = setTimeout(()=>{ clickCount = 0; }, 500);
+  // Função de transposição (cromática, com sufixos)
+  const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  function normalizeNote(note) {
+    switch(note) {
+      case "Db": return "C#";
+      case "Eb": return "D#";
+      case "Gb": return "F#";
+      case "Ab": return "G#";
+      case "Bb": return "A#";
+      default: return note;
     }
-  });
+  }
+  function transposeChord(chord, semitones) {
+    const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
+    const match = chord.match(regex);
+    if (!match) return chord;
+    let root = normalizeNote(match[1]);
+    let suffix = match[3] || "";
+    let bass = match[5] ? normalizeNote(match[5]) : null;
+    let idx = NOTES_SHARP.indexOf(root);
+    if (idx === -1) return chord;
+    let newIdx = (idx + semitones + 12) % 12;
+    let newRoot = NOTES_SHARP[newIdx];
+    let newBass = "";
+    if (bass) {
+      let idxBass = NOTES_SHARP.indexOf(bass);
+      if (idxBass !== -1) {
+        let newIdxBass = (idxBass + semitones + 12) % 12;
+        newBass = "/" + NOTES_SHARP[newIdxBass];
+      } else {
+        newBass = "/" + bass;
+      }
+    }
+    return `${newRoot}${suffix}${newBass}`;
+  }
 
-  // Botões de tonalidade (apenas UI)
-  overlay.querySelector("#tone-up").onclick = () => {
+  function renderOverlays() {
+    overlayNotes.innerHTML = "";
+    notesData.forEach(note => {
+      const div = document.createElement("div");
+      div.style.position = "absolute";
+      div.style.left = `${note.bbox.x0}px`;
+      div.style.top = `${note.bbox.y0}px`;
+      div.style.background = "#fff";
+      div.style.color = "#222";
+      div.style.fontWeight = "bold";
+      div.style.borderRadius = "4px";
+      div.style.padding = "1px 5px";
+      div.style.fontSize = "1.1em";
+      div.style.boxShadow = "0 1px 2px #999";
+      div.style.pointerEvents = "none";
+      div.style.zIndex = "10020";
+      div.textContent = transposeChord(note.text, currentTone);
+      overlayNotes.appendChild(div);
+    });
+  }
+
+  function detectNotes() {
+    transpMsg.style.display = "block";
+    overlayNotes.innerHTML = "";
+    Tesseract.recognize(img.src, 'por', {
+      logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
+    }).then(({ data }) => {
+      notesData = [];
+      (data.words||[]).forEach(wordObj => {
+        if (/^[A-G][#b]?(m|sus|dim|aug|add|maj|min|7|9|11|13)?$/.test(wordObj.text)) {
+          notesData.push({
+            text: wordObj.text,
+            bbox: wordObj.bbox
+          });
+        }
+      });
+      renderOverlays();
+      transpMsg.style.display = "none";
+      controls.classList.remove("hidden");
+    });
+  }
+
+  img.onload = detectNotes;
+  if (img.complete) detectNotes(); // se já carregada
+
+  // Controles de tonalidade
+  document.getElementById("tone-up").onclick = () => {
     currentTone++;
-    toneValue.textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
-    transpMsg.style.display = "block";
-    setTimeout(()=>{ transpMsg.style.display = "none"; }, 2500);
+    document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
+    renderOverlays();
   };
-  overlay.querySelector("#tone-down").onclick = () => {
+  document.getElementById("tone-down").onclick = () => {
     currentTone--;
-    toneValue.textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
-    transpMsg.style.display = "block";
-    setTimeout(()=>{ transpMsg.style.display = "none"; }, 2500);
+    document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
+    renderOverlays();
   };
 }
 
