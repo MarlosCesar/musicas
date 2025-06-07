@@ -11,6 +11,7 @@ const POLL_INTERVAL = 5000;
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
 const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
+const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive.file";
 
 let state = {
   tabs: [...TABS_DEFAULT],
@@ -25,6 +26,25 @@ let pollTimer = null;
 
 function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
+}
+
+function gapiAuth() {
+  return new Promise((resolve, reject) => {
+    gapi.load('client:auth2', async () => {
+      await gapi.client.init({
+        apiKey: GOOGLE_API_KEY,
+        clientId: GOOGLE_CLIENT_ID,
+        discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+        scope: GOOGLE_SCOPES
+      });
+      const auth = gapi.auth2.getAuthInstance();
+      if (!auth.isSignedIn.get()) {
+        auth.signIn().then(resolve).catch(reject);
+      } else {
+        resolve();
+      }
+    });
+  });
 }
 
 // --- State Management ---
@@ -595,11 +615,17 @@ function openFullscreen(cifra) {
   };
   if (overlay.requestFullscreen) overlay.requestFullscreen();
 
-  // === Zoom e Pan ===
+  // --- VARIÁVEIS PARA ZOOM/PAN ---
   const img = document.getElementById("fullscreen-img");
   const overlayNotes = document.getElementById("overlay-notes");
   let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
   let pinchStartDist = null, pinchStartScale = null;
+
+  // --- ZOOM/PAN (mantém overlay sincronizado) ---
+  function syncOverlayTransform() {
+    overlayNotes.style.transformOrigin = img.style.transformOrigin;
+    overlayNotes.style.transform = img.style.transform;
+  }
   img.onwheel = function(e) {
     e.preventDefault();
     const rect = img.getBoundingClientRect();
@@ -609,8 +635,7 @@ function openFullscreen(cifra) {
     scale = Math.max(0.5, Math.min(5, scale * delta));
     img.style.transformOrigin = `${offsetX}px ${offsetY}px`;
     img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-    overlayNotes.style.transformOrigin = img.style.transformOrigin;
-    overlayNotes.style.transform = img.style.transform;
+    syncOverlayTransform();
   };
   img.onmousedown = function(e) {
     isDragging = true;
@@ -623,8 +648,7 @@ function openFullscreen(cifra) {
       lastX = e.clientX - startX;
       lastY = e.clientY - startY;
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-      overlayNotes.style.transform = img.style.transform;
-      overlayNotes.style.transformOrigin = img.style.transformOrigin;
+      syncOverlayTransform();
     }
   };
   overlay.onmouseup = function() { isDragging = false; };
@@ -650,15 +674,13 @@ function openFullscreen(cifra) {
       );
       scale = Math.max(0.5, Math.min(5, pinchStartScale * dist / pinchStartDist));
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-      overlayNotes.style.transform = img.style.transform;
-      overlayNotes.style.transformOrigin = img.style.transformOrigin;
+      syncOverlayTransform();
       e.preventDefault();
     } else if (e.touches.length === 1 && isDragging) {
       lastX = e.touches[0].clientX - startX;
       lastY = e.touches[0].clientY - startY;
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-      overlayNotes.style.transform = img.style.transform;
-      overlayNotes.style.transformOrigin = img.style.transformOrigin;
+      syncOverlayTransform();
       e.preventDefault();
     }
   };
@@ -692,27 +714,32 @@ function openFullscreen(cifra) {
     }
   };
 
-  // ---- OCR e Overlay de Notas (ativação por 3 cliques) ----
+  // --- OCR E OVERLAY DE NOTAS (triple click para ativar) ---
   const transpMsg = document.getElementById("transp-overlay-msg");
   const controls = document.getElementById("tone-controls");
   let currentTone = 0;
   let notesData = [];
   let tripleClickTimer = null, tripleClickCount = 0, ocrActivated = false;
 
-  // Cálculo de escala (para overlays)
   function renderOverlays() {
     overlayNotes.innerHTML = "";
-    const naturalWidth = img.naturalWidth;
-    const naturalHeight = img.naturalHeight;
-    const displayWidth = img.width;
-    const displayHeight = img.height;
-    const scaleX = displayWidth / naturalWidth;
-    const scaleY = displayHeight / naturalHeight;
+    // --- Cálculo para alinhar overlay exatamente sobre a imagem ---
+    const wrapper = img.parentElement;
+    const wrapperRect = wrapper.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    // Calcula offset da imagem dentro da área wrapper (por centralização)
+    const offsetX = imgRect.left - wrapperRect.left;
+    const offsetY = imgRect.top - wrapperRect.top;
+    // Escala real da imagem exibida para natural
+    const scaleX = img.width / img.naturalWidth;
+    const scaleY = img.height / img.naturalHeight;
+    // Posiciona overlays considerando offset E escala
     notesData.forEach(note => {
       const div = document.createElement("div");
       div.style.position = "absolute";
-      div.style.left = `${note.bbox.x0 * scaleX}px`;
-      div.style.top = `${note.bbox.y0 * scaleY}px`;
+      // As coordenadas do Tesseract são relativas à naturalWidth/Height
+      div.style.left = `${offsetX + note.bbox.x0 * scaleX}px`;
+      div.style.top = `${offsetY + note.bbox.y0 * scaleY}px`;
       div.style.width = `${(note.bbox.x1 - note.bbox.x0) * scaleX}px`;
       div.style.height = `${(note.bbox.y1 - note.bbox.y0) * scaleY}px`;
       div.style.background = "#fff";
@@ -759,7 +786,6 @@ function openFullscreen(cifra) {
     });
   }
 
-  // Triplo clique/click/tap na imagem ativa OCR
   function handleTripleClick() {
     if (ocrActivated) return;
     ocrActivated = true;
@@ -768,7 +794,6 @@ function openFullscreen(cifra) {
     detectNotes();
   }
 
-  // Triplo clique mouse
   img.addEventListener('click', function() {
     tripleClickCount++;
     if (tripleClickCount === 3) {
@@ -780,10 +805,7 @@ function openFullscreen(cifra) {
       tripleClickTimer = setTimeout(()=>{ tripleClickCount = 0; }, 500);
     }
   });
-
-  // Triplo toque/tap mobile
   img.addEventListener('touchend', function(e) {
-    // Só conta se for toque único (não pinch)
     if (e.touches.length === 0) {
       tripleClickCount++;
       if (tripleClickCount === 3) {
@@ -797,7 +819,7 @@ function openFullscreen(cifra) {
     }
   });
 
-  // Controles de tonalidade
+  // --- CONTROLES DE TONALIDADE ---
   document.getElementById("tone-up").onclick = () => {
     currentTone++;
     document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
@@ -810,12 +832,68 @@ function openFullscreen(cifra) {
   };
 }
 
-// --- Upload para Google Drive ---
-async function uploadCifraToDrive(cifra) {
-  // Implemente aqui sua integração OAuth2 real Google Drive!
-  alert("Upload real para o Google Drive precisa ser implementado com OAuth2!");
+// Função transposeChord deve retornar apenas TEXTO PURO!
+function transposeChord(chord, semitones) {
+  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
+  const match = chord.match(regex);
+  if (!match) return chord;
+  let root = normalizeNote(match[1]);
+  let suffix = match[3] || "";
+  let bass = match[5] ? normalizeNote(match[5]) : null;
+  let idx = NOTES_SHARP.indexOf(root);
+  if (idx === -1) return chord;
+  let newIdx = (idx + semitones + 12) % 12;
+  let newRoot = NOTES_SHARP[newIdx];
+  let newBass = "";
+  if (bass) {
+    let idxBass = NOTES_SHARP.indexOf(bass);
+    if (idxBass !== -1) {
+      let newIdxBass = (idxBass + semitones + 12) % 12;
+      newBass = "/" + NOTES_SHARP[newIdxBass];
+    } else {
+      newBass = "/" + bass;
+    }
+  }
+  return `${newRoot}${suffix}${newBass}`;
 }
 
+async function uploadCifraToDrive(cifra) {
+  await gapiAuth();
+
+  // Obter o arquivo (Blob) a partir da URL local ou remota
+  let fileBlob;
+  if (cifra.url.startsWith('blob:')) {
+    // Arquivo local (foto/captura/upload)
+    fileBlob = await fetch(cifra.url).then(r => r.blob());
+  } else {
+    // Imagem remota (ex: Google Drive, proxy)
+    fileBlob = await fetch(cifra.url).then(r => r.blob());
+  }
+
+  const metadata = {
+    name: cifra.title,
+    mimeType: fileBlob.type || "image/jpeg"
+    // Se quiser, adicione 'parents: [FOLDER_ID]' para subir em uma pasta
+  };
+
+  const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+  form.append('file', fileBlob);
+
+  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method: 'POST',
+    headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
+    body: form,
+  });
+
+  if (resp.ok) {
+    const data = await resp.json();
+    alert('Upload concluído! ID: ' + data.id);
+  } else {
+    alert('Falha ao fazer upload para o Google Drive!');
+  }
+}
 // --- Selection helpers ---
 function isSelected(id) {
   const tab = state.currentTab;
