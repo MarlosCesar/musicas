@@ -1,3 +1,4 @@
+// --- State ---
 const TABS_DEFAULT = [
   { name: "Domingo Manhã", type: "default", mode: "offline" },
   { name: "Domingo Noite", type: "default", mode: "offline" },
@@ -7,7 +8,6 @@ const TABS_DEFAULT = [
 ];
 const LOCALSTORE_KEY = "cifras2-app-state-v2";
 const POLL_INTERVAL = 5000;
-
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
 const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
@@ -21,14 +21,14 @@ let state = {
   search: "",
   onlineCache: {},
 };
-
 let pollTimer = null;
+let editingTabIndex = null;
+let newTabValue = "";
 
+// --- Util ---
 function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
-
-// --- Função para converter File em base64 (data URL) ---
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -37,7 +37,6 @@ function fileToBase64(file) {
     reader.readAsDataURL(file);
   });
 }
-
 function waitForGapi() {
   return new Promise((resolve, reject) => {
     if (window.gapi) return resolve();
@@ -58,7 +57,6 @@ function waitForGapi() {
     document.head.appendChild(script);
   });
 }
-
 async function gapiAuth() {
   await waitForGapi();
   return new Promise((resolve, reject) => {
@@ -92,7 +90,6 @@ function saveState() {
     currentTab: state.currentTab
   }));
 }
-
 function loadState() {
   const s = localStorage.getItem(LOCALSTORE_KEY);
   if (s) {
@@ -110,57 +107,126 @@ function loadState() {
     state.currentTab = loaded.currentTab || "Domingo Manhã";
   }
 }
-
 function setTab(tabName) {
   state.currentTab = tabName;
   renderTabs();
   renderCifras();
   updateFloatControls();
 }
-
-function addTab(name, privacy="public", mode="offline") {
-  if (state.tabs.some(t => t.name === name)) return false;
-  state.tabs.push({ name, type: "custom", privacy, mode });
-  state.cifras[name] = [];
-  saveState(); renderTabs(); setTab(name);
-  return true;
-}
-
-function setTabMode(tabName, mode) {
-  const tab = state.tabs.find(t => t.name === tabName);
-  if (tab) { tab.mode = mode; saveState(); renderTabs(); renderCifras(); }
-}
-
 function removeCifras(tab, ids) {
   state.cifras[tab] = (state.cifras[tab] || []).filter(cifra => !ids.includes(cifra.id));
   state.selection[tab] = new Set();
   saveState(); renderCifras(); updateFloatControls();
 }
-
 function clearSelection(tab) {
   state.selection[tab] = new Set();
   updateFloatControls();
 }
 
-// --- UI Rendering ---
+// --- Tabs UI ---
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
   tabsElem.innerHTML = "";
   state.tabs.forEach((tab, idx) => {
     const btn = document.createElement("button");
     btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
-    btn.textContent = tab.name;
-    btn.onclick = () => setTab(tab.name);
+    btn.tabIndex = 0;
+    // Inline editing for new tab
+    if (editingTabIndex === idx) {
+      btn.style.position = "relative";
+      btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent);" autofocus />`;
+      const actions = document.createElement("div");
+      actions.className = "suspended-actions";
+      const ok = document.createElement("button");
+      ok.textContent = "✅ OK";
+      ok.className = "tab-action-btn";
+      ok.onclick = (e) => {
+        e.stopPropagation();
+        const val = btn.querySelector("input").value.trim();
+        if (val !== "") {
+          state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
+          state.cifras[val] = [];
+          editingTabIndex = null;
+          newTabValue = "";
+          saveState(); renderTabs(); setTab(val);
+        }
+      };
+      const clear = document.createElement("button");
+      clear.textContent = "🧹 Limpar";
+      clear.className = "tab-action-btn";
+      clear.onclick = (e) => {
+        e.stopPropagation();
+        btn.querySelector("input").value = "";
+        btn.querySelector("input").focus();
+        newTabValue = "";
+      };
+      const cancel = document.createElement("button");
+      cancel.textContent = "❌ Cancelar";
+      cancel.className = "tab-action-btn";
+      cancel.onclick = (e) => {
+        e.stopPropagation();
+        state.tabs.splice(idx, 1);
+        editingTabIndex = null;
+        newTabValue = "";
+        renderTabs();
+      };
+      actions.appendChild(ok);
+      actions.appendChild(clear);
+      actions.appendChild(cancel);
+      btn.appendChild(actions);
+      setTimeout(() => {
+        const input = btn.querySelector("input");
+        if (input) {
+          input.focus();
+          input.selectionStart = input.value.length;
+          input.oninput = (e) => newTabValue = e.target.value;
+          input.onkeydown = (e) => {
+            if (e.key === "Enter") ok.onclick(e);
+            if (e.key === "Escape") cancel.onclick(e);
+          };
+        }
+      }, 10);
+    } else {
+      btn.textContent = tab.name;
+      btn.onclick = () => setTab(tab.name);
+      if (tab.type === "custom") {
+        const close = document.createElement("button");
+        close.innerHTML = "&#10006;";
+        close.title = "Excluir aba";
+        close.className = "tab-close";
+        close.onclick = (e) => {
+          e.stopPropagation();
+          const removed = state.tabs.splice(idx, 1)[0];
+          delete state.cifras[removed.name];
+          if (state.currentTab === removed.name) {
+            setTab(state.tabs[0]?.name || "");
+          } else {
+            renderTabs();
+            renderCifras();
+          }
+          saveState();
+        };
+        btn.appendChild(close);
+        btn.style.position = "relative";
+      }
+    }
     tabsElem.appendChild(btn);
   });
+  // Botão "+" (adicionar aba)
   const addBtn = document.createElement("button");
   addBtn.className = "tab-add";
-  addBtn.textContent = "+";
-  addBtn.onclick = showAddTabModal;
+  addBtn.innerHTML = "<i class='fas fa-plus'></i>";
+  addBtn.onclick = () => {
+    if (editingTabIndex !== null) return;
+    state.tabs.push({ name: "", type: "custom", mode: "offline" });
+    editingTabIndex = state.tabs.length - 1;
+    newTabValue = "";
+    renderTabs();
+  };
   tabsElem.appendChild(addBtn);
-  handleTabScrollArrows();
 }
 
+// --- Cifras UI ---
 function renderCifras() {
   const list = document.getElementById("cifra-list");
   const empty = document.getElementById("empty-state");
@@ -190,10 +256,8 @@ function renderCifras() {
         renderCifras();
         e.stopPropagation();
       };
-
       const img = document.createElement("img");
       img.className = "cifra-img";
-      
       if (cifra.driveId) {
         img.src = `https://drive.google.com/thumbnail?id=${cifra.driveId}&sz=w200`;
       } else {
@@ -201,11 +265,9 @@ function renderCifras() {
       }
       img.alt = cifra.title;
       img.onclick = e => { openFullscreen(cifra); e.stopPropagation(); };
-
       const title = document.createElement("div");
       title.className = "cifra-title";
       title.textContent = stripExtension(cifra.title);
-
       li.appendChild(img);
       li.appendChild(title);
       list.appendChild(li);
@@ -213,6 +275,7 @@ function renderCifras() {
   }
 }
 
+// --- Seleção ---
 function updateFloatControls() {
   const float = document.getElementById("float-controls");
   const tab = state.currentTab;
@@ -228,8 +291,6 @@ function updateFloatControls() {
     float.classList.remove("hidden");
   }
 }
-
-// --- Float controls events ---
 document.getElementById("select-all-btn").onclick = () => {
   const tab = state.currentTab;
   if (!state.selection[tab]) state.selection[tab] = new Set();
@@ -242,12 +303,10 @@ document.getElementById("select-all-btn").onclick = () => {
   updateFloatControls();
   renderCifras();
 };
-
 document.getElementById("clear-selection-btn").onclick = () => {
   clearSelection(state.currentTab);
   renderCifras();
 };
-
 document.getElementById("delete-selected-btn").onclick = () => {
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
@@ -255,13 +314,11 @@ document.getElementById("delete-selected-btn").onclick = () => {
   renderCifras();
   toast("Cifra(s) excluída(s).");
 };
-
 document.getElementById("rename-selected-btn").onclick = () => {
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
   if (selected.length === 1) showRenameModal(selected[0]);
 };
-
 document.getElementById("upload-selected-btn").onclick = async () => {
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
@@ -309,7 +366,7 @@ function showRenameModal(cifraId) {
   modal.querySelector("#close-rename-modal").onclick = () => document.body.removeChild(modal);
 }
 
-// --- FAB menu ---
+// --- FAB menu (apenas fab-buscar2) ---
 const fabBuscar2 = document.getElementById("fab-buscar2");
 if (fabBuscar2) fabBuscar2.onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
@@ -319,12 +376,10 @@ if (fabBuscar2) fabBuscar2.onclick = () => {
 document.getElementById("fab").onclick = () => {
   document.getElementById("fab-menu").classList.toggle("hidden");
 };
-
 document.getElementById("fab-camera").onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
   openCameraCapture();
 };
-
 document.getElementById("fab-upload").onclick = async () => {
   document.getElementById("fab-menu").classList.add("hidden");
   const tab = state.currentTab;
@@ -401,16 +456,12 @@ async function openCameraCapture() {
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
     const base64 = canvas.toDataURL("image/jpeg", 0.92);
-
     if (stream) stream.getTracks().forEach(track => track.stop());
     overlay.remove();
-
     const now = new Date();
     const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}`;
     const id = "foto-" + now.getTime();
-
     const tab = state.currentTab;
     if (!state.cifras[tab]) state.cifras[tab] = [];
     state.cifras[tab].push({
@@ -421,7 +472,6 @@ async function openCameraCapture() {
     });
     if (!state.selection[tab]) state.selection[tab] = new Set();
     state.selection[tab].add(id);
-
     saveState();
     renderCifras();
   };
@@ -433,32 +483,26 @@ function buscaCifrasLocal(query, cifrasTab) {
   const q = query.toLowerCase();
   const resultado = [];
   const usados = new Set();
-
   cifrasTab.filter(c => c.title.toLowerCase().startsWith(q))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
-
   cifrasTab.filter(c => c.title.toLowerCase() === q && !usados.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
-
   cifrasTab.filter(c => !usados.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
-
   cifrasTab.filter(c => c.title.toLowerCase().includes(q) && !usados.has(c.id))
     .sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'))
     .forEach(c => { resultado.push(c); usados.add(c.id); });
-
   return resultado.slice(0, 20);
 }
 
-// --- Busca com dropdown ---
+// --- Busca do search-bar ---
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
   renderCifras();
-
   const dropdown = document.getElementById("search-dropdown");
   const cifrasTab = state.cifras[state.currentTab] || [];
   if (val.length === 0) {
@@ -467,13 +511,10 @@ document.getElementById("search-bar").oninput = async (e) => {
     return;
   }
   const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
-
   dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
   dropdown.classList.remove("hidden");
   const filesNuvem = await searchDrive(val);
-
   dropdown.innerHTML = "";
-
   if (resultadosLocal.length) {
     dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
     resultadosLocal.forEach(c => {
@@ -488,7 +529,6 @@ document.getElementById("search-bar").oninput = async (e) => {
       dropdown.appendChild(li);
     });
   }
-
   const idsLocais = new Set(cifrasTab.map(c => c.id));
   const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
   if (filesNuvemFiltrados.length) {
@@ -506,16 +546,13 @@ document.getElementById("search-bar").oninput = async (e) => {
       dropdown.appendChild(li);
     });
   }
-
   if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
     dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
   }
 };
-
 document.getElementById("search-bar").onfocus = () => {
   if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
 };
-
 document.getElementById("search-bar").onblur = () => setTimeout(() => {
   document.getElementById("search-dropdown").classList.add("hidden");
 }, 200);
@@ -547,14 +584,13 @@ async function searchDrive(query) {
   return data.files || [];
 }
 
-// --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
+// --- OCR/TRANSPOSE PARA CIFRA EM IMAGEM ---
 function getProxiedUrl(originalUrl) {
   if (originalUrl.startsWith('data:') || originalUrl.startsWith('blob:')) {
     return originalUrl;
   }
   return "https://cors-proxy-cifras.onrender.com/proxy?url=" + encodeURIComponent(originalUrl);
 }
-
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
   let fullscreenUrl = getProxiedUrl(cifra.url);
@@ -586,7 +622,7 @@ function openFullscreen(cifra) {
   };
   if (overlay.requestFullscreen) overlay.requestFullscreen();
 
-  // === Zoom e Pan ===
+  // Zoom e Pan
   const img = document.getElementById("fullscreen-img");
   let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
   let pinchStartDist = null, pinchStartScale = null;
@@ -670,13 +706,12 @@ function openFullscreen(cifra) {
     }
   };
 
-  // ---- OCR e Overlay de Notas ----
+  // OCR/Overlay
   const overlayNotes = document.getElementById("overlay-notes");
   const transpMsg = document.getElementById("transp-overlay-msg");
   const controls = document.getElementById("tone-controls");
   let currentTone = 0;
   let notesData = [];
-
   const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
   function normalizeNote(note) {
     switch(note) {
@@ -711,7 +746,6 @@ function openFullscreen(cifra) {
     }
     return `${newRoot}${suffix}${newBass}`;
   }
-
   function renderOverlays() {
     overlayNotes.innerHTML = "";
     notesData.forEach(note => {
@@ -732,7 +766,6 @@ function openFullscreen(cifra) {
       overlayNotes.appendChild(div);
     });
   }
-
   function detectNotes() {
     transpMsg.style.display = "block";
     overlayNotes.innerHTML = "";
@@ -758,10 +791,8 @@ function openFullscreen(cifra) {
       }
     });
   }
-
   img.onload = detectNotes;
   if (img.complete) detectNotes();
-
   document.getElementById("tone-up").onclick = () => {
     currentTone++;
     document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
@@ -777,30 +808,25 @@ function openFullscreen(cifra) {
 // --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
   await gapiAuth();
-
   let fileBlob;
   if (cifra.url.startsWith('blob:') || cifra.url.startsWith('data:')) {
     fileBlob = await fetch(cifra.url).then(r => r.blob());
   } else {
     fileBlob = await fetch(cifra.url).then(r => r.blob());
   }
-
   const metadata = {
     name: cifra.title,
     mimeType: fileBlob.type || "image/jpeg"
   };
-
   const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
   const form = new FormData();
   form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
   form.append('file', fileBlob);
-
   const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
     method: 'POST',
     headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
     body: form,
   });
-
   if (resp.ok) {
     const data = await resp.json();
     alert('Upload concluído! ID: ' + data.id);
@@ -809,243 +835,22 @@ async function uploadCifraToDrive(cifra) {
   }
 }
 
-// --- Selection helpers ---
+// --- Helpers ---
 function isSelected(id) {
   const tab = state.currentTab;
   return state.selection[tab] && state.selection[tab].has(id);
 }
-
-// --- Toast ---
 function toast(msg) {
   const t = document.getElementById("toast");
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2000);
 }
-
-// --- Tab scroll and arrows ---
-function handleTabScrollArrows() {
-  const tabs = document.getElementById("tabs");
-  const left = document.getElementById("tab-scroll-left");
-  const right = document.getElementById("tab-scroll-right");
-  function updateArrows() {
-    left.classList.toggle("visible", tabs.scrollLeft > 16);
-    right.classList.toggle("visible", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 16);
-  }
-  updateArrows();
-  tabs.onscroll = updateArrows;
-  document.body.onmousemove = e => {
-    const { clientX, clientY } = e;
-    if (clientY < 130) {
-      if (clientX < 40) left.classList.add("visible");
-      else left.classList.remove("visible");
-      if (window.innerWidth - clientX < 40) right.classList.add("visible");
-      else right.classList.remove("visible");
-    }
-  };
-  left.onclick = () => tabs.scrollBy({ left: -180, behavior: "smooth" });
-  right.onclick = () => tabs.scrollBy({ left: 180, behavior: "smooth" });
-  let isDown = false, startX, scrollLeft;
-  tabs.addEventListener('touchstart', e => {
-    isDown = true; startX = e.touches[0].pageX - tabs.offsetLeft; scrollLeft = tabs.scrollLeft;
-  });
-  tabs.addEventListener('touchend', () => isDown = false);
-  tabs.addEventListener('touchmove', e => {
-    if (!isDown) return;
-    const x = e.touches[0].pageX - tabs.offsetLeft;
-    tabs.scrollLeft = scrollLeft - (x - startX);
-  });
-  tabs.addEventListener('wheel', e => {
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      tabs.scrollLeft += e.deltaX;
-      e.preventDefault();
-    }
-  }, { passive: false });
-}
-
-// --- Modal: adicionar aba ---
-function showAddTabModal() {
-  const modal = document.getElementById("add-tab-modal");
-  modal.classList.remove("hidden");
-  document.getElementById("add-tab-name").value = "";
-  document.getElementById("save-add-tab-btn").onclick = () => {
-    const name = document.getElementById("add-tab-name").value.trim();
-    let privacy = "public";
-    const priv = document.querySelector('input[name="tab-privacy"]:checked');
-    if (priv) privacy = priv.value;
-    if (name) {
-      addTab(name, privacy);
-      modal.classList.add("hidden");
-    }
-  };
-  document.getElementById("close-add-tab-modal").onclick = () => modal.classList.add("hidden");
-}
-
-// --- Modal: nuvem ---
-function showCloudModal(files=[]) {
-  const modal = document.getElementById("cloud-modal");
-  modal.classList.remove("hidden");
-  const list = document.getElementById("cloud-list");
-  list.innerHTML = "";
-  if (!files.length) {
-    list.innerHTML = "<div>Buscando cifras na nuvem...</div>";
-    searchDrive(state.search || "").then(files => showCloudModal(files));
-    return;
-  }
-  if (!files.length) {
-    list.innerHTML = "<div>Nenhum resultado encontrado.</div>";
-    return;
-  }
-  files.forEach(f => {
-    const label = document.createElement("label");
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.value = f.id;
-    const img = document.createElement("img");
-    img.src = `https://drive.google.com/thumbnail?id=${f.id}&sz=w200`;
-    img.width = 40; img.height = 56; img.alt = f.name;
-    const span = document.createElement("span");
-    span.textContent = f.name;
-    label.appendChild(cb); label.appendChild(img); label.appendChild(span);
-    list.appendChild(label);
-  });
-  document.getElementById("add-cloud-btn").onclick = () => {
-    const selected = Array.from(list.querySelectorAll("input:checked")).map(cb => cb.value);
-    const tab = state.currentTab;
-    if (!state.cifras[tab]) state.cifras[tab] = [];
-    files.filter(f => selected.includes(f.id)).forEach(f => {
-      state.cifras[tab].push({
-        id: f.id,
-        title: f.name,
-        url: `https://drive.google.com/thumbnail?id=${f.id}&sz=w1000`,
-        driveId: f.id
-      });
-    });
-    saveState();
-    renderCifras();
-    modal.classList.add("hidden");
-    toast(`${selected.length} cifra(s) adicionada(s) da nuvem!`);
-  };
-  document.getElementById("close-cloud-modal").onclick = () => modal.classList.add("hidden");
-}
-
-// --- Polling for online tabs ---
-function startPolling() {
-  if (pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(async () => {
-    state.tabs.filter(tab => tab.mode === "online").forEach(async tab => {
-      // Simulação, expanda para integração real se desejar
-    });
-  }, POLL_INTERVAL);
-}
-
-// --- Algoritmo de transposição para cifra em texto ---
-const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
-function normalizeNote(note) {
-  switch(note) {
-    case "Db": return "C#";
-    case "Eb": return "D#";
-    case "Gb": return "F#";
-    case "Ab": return "G#";
-    case "Bb": return "A#";
-    default: return note;
-  }
-}
-function transposeChord(chord, semitones) {
-  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?$/;
-  const match = chord.match(regex);
-  if (!match) return chord;
-  let root = normalizeNote(match[1]);
-  let suffix = match[3] || "";
-  let bass = match[5] ? normalizeNote(match[5]) : null;
-  let idx = NOTES_SHARP.indexOf(root);
-  if (idx === -1) return chord;
-  let newIdx = (idx + semitones + 12) % 12;
-  let newRoot = NOTES_SHARP[newIdx];
-  let newBass = "";
-  if (bass) {
-    let idxBass = NOTES_SHARP.indexOf(bass);
-    if (idxBass !== -1) {
-      let newIdxBass = (idxBass + semitones + 12) % 12;
-      newBass = "/" + NOTES_SHARP[newIdxBass];
-    } else {
-      newBass = "/" + bass;
-    }
-  }
-  return `<span class="nota-sobreposta">${newRoot}${suffix}${newBass}</span>`;
-}
-function transposeTextCifra(text, semitones) {
-  const chordRegex = /\b([A-G](#|b)?([a-z0-9º°+\-\(\)]*)?(\/[A-G](#|b)?)?)\b/g;
-  return text.replace(chordRegex, (match) => transposeChord(match, semitones));
-}
-
-// --- FULLSCREEN PARA CIFRA DE TEXTO ---
-function abrirCifraTextoFullscreen() {
-  const cifraOriginal = document.getElementById("cifra-texto-bloco").innerText;
-  let currentTransposition = 0;
-
-  const overlay = document.getElementById("fullscreen-overlay");
-  overlay.innerHTML = `
-    <button class="close-fullscreen">&times;</button>
-    <div style="position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;">
-      <pre id="cifra-texto-full" style="font-size:1.1em;max-width:90vw;max-height:80vh;overflow:auto;background:#fff;color:#222;padding:25px 18px 18px 18px;border-radius:12px;box-shadow:0 2px 16px #0008;">
-      </pre>
-      <div id="tone-controls-text" class="fullscreen-tone-controls hidden">
-        <button id="tone-down-text">-</button>
-        <span class="tone-label" id="tone-value-text">0</span>
-        <button id="tone-up-text">+</button>
-      </div>
-    </div>
-  `;
-  overlay.classList.remove("hidden");
-
-  function atualizarCifraTexto() {
-    overlay.querySelector("#cifra-texto-full").innerHTML = transposeTextCifra(cifraOriginal, currentTransposition);
-    overlay.querySelector("#tone-value-text").textContent = currentTransposition > 0 ? `+${currentTransposition}` : currentTransposition;
-  }
-  atualizarCifraTexto();
-
-  overlay.querySelector(".close-fullscreen").onclick = () => {
-    overlay.classList.add("hidden");
-    if (document.fullscreenElement) document.exitFullscreen();
-  };
-  overlay.onclick = e => { 
-    if (e.target === overlay) {
-      overlay.classList.add("hidden");
-      if (document.fullscreenElement) document.exitFullscreen();
-    }
-  };
-  if (overlay.requestFullscreen) overlay.requestFullscreen();
-
-  let clickCount = 0, clickTimer = null;
-  const pre = overlay.querySelector("#cifra-texto-full");
-  const controls = overlay.querySelector("#tone-controls-text");
-  pre.addEventListener('click', function() {
-    clickCount++;
-    if (clickCount === 3) {
-      controls.classList.remove("hidden");
-      clickCount = 0;
-      clearTimeout(clickTimer);
-    } else {
-      clearTimeout(clickTimer);
-      clickTimer = setTimeout(()=>{ clickCount = 0; }, 500);
-    }
-  });
-
-  overlay.querySelector("#tone-up-text").onclick = () => {
-    currentTransposition++;
-    atualizarCifraTexto();
-  };
-  overlay.querySelector("#tone-down-text").onclick = () => {
-    currentTransposition--;
-    atualizarCifraTexto();
-  };
-}
+function handleTabScrollArrows() {}
 
 // --- Startup ---
 window.onload = () => {
   loadState();
   renderTabs();
   setTab(state.currentTab);
-  startPolling();
 };
