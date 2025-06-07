@@ -567,6 +567,7 @@ function getProxiedUrl(originalUrl) {
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
   let fullscreenUrl = getProxiedUrl(cifra.url); // <-- Aqui usamos o proxy!
+  console.log("URL usada na imagem fullscreen:", fullscreenUrl);
   let isTextCifra = !!cifra.text;
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
