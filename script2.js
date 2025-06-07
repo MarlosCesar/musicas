@@ -153,12 +153,13 @@ function renderTabs() {
     btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
     btn.tabIndex = 0;
 
-    // Aba em edição (input + ações suspensas)
+    // Aba em edição
     if (editingTabIndex === idx) {
       btn.style.position = "relative";
       btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent);" autofocus />`;
       const actions = document.createElement("div");
       actions.className = "suspended-actions";
+
       // OK
       const ok = document.createElement("button");
       ok.textContent = "✅ OK";
@@ -171,9 +172,12 @@ function renderTabs() {
           state.cifras[val] = [];
           editingTabIndex = null;
           newTabValue = "";
-          saveState(); renderTabs(); setTab(val);
+          saveState();
+          renderTabs();
+          setTab(val);
         }
       };
+
       // Limpar
       const clear = document.createElement("button");
       clear.textContent = "🧹 Limpar";
@@ -184,6 +188,7 @@ function renderTabs() {
         btn.querySelector("input").focus();
         newTabValue = "";
       };
+
       // Cancelar
       const cancel = document.createElement("button");
       cancel.textContent = "❌ Cancelar";
@@ -195,6 +200,7 @@ function renderTabs() {
         newTabValue = "";
         renderTabs();
       };
+
       actions.appendChild(ok);
       actions.appendChild(clear);
       actions.appendChild(cancel);
@@ -212,12 +218,11 @@ function renderTabs() {
           };
         }
       }, 10);
-
     } else {
       btn.textContent = tab.name;
       btn.onclick = () => setTab(tab.name);
 
-      // "X" vermelho em abas custom
+      // Aba customizada: "x" vermelho no topo direito, com hover/touch
       if (tab.type === "custom") {
         const close = document.createElement("button");
         close.innerHTML = "&#10006;";
@@ -235,8 +240,14 @@ function renderTabs() {
           }
           saveState();
         };
+        btn.classList.add('custom');
         btn.appendChild(close);
-        btn.style.position = "relative";
+
+        // Mostrar "x" ao toque (mobile)
+        btn.addEventListener('touchstart', (e) => {
+          btn.classList.toggle('tab-show-x');
+          setTimeout(() => btn.classList.remove('tab-show-x'), 2000);
+        });
       }
     }
     tabsElem.appendChild(btn);
@@ -247,7 +258,7 @@ function renderTabs() {
   addBtn.className = "tab-add";
   addBtn.innerHTML = "<i class='fas fa-plus'></i>";
   addBtn.onclick = () => {
-    if (editingTabIndex !== null) return; // Só uma edição por vez
+    if (editingTabIndex !== null) return;
     state.tabs.push({ name: "", type: "custom", mode: "offline" });
     editingTabIndex = state.tabs.length - 1;
     newTabValue = "";
