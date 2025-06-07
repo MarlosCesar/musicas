@@ -930,7 +930,6 @@ function openFullscreen(cifra) {
     document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
     renderOverlays();
   };
-}
 
 // --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
