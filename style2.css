@@ -99,7 +99,7 @@ body {
   position: fixed;
   bottom: 32px;
   right: 32px;
-  background: linear-gradient(90deg,#8b5cf6,#4f46e5);
+  background: linear-gradient(90deg, #8b5cf6, #4f46e5);
   color: #fff;
   border: none;
   border-radius: 50%;
@@ -115,7 +115,12 @@ body {
   transition: background 0.18s;
   gap: 0.5rem;
 }
-.fab:hover { background: linear-gradient(90deg,#7c3aed,#4f46e5);}
+.fab:hover {
+  background: linear-gradient(90deg, #7c3aed, #4f46e5);
+}
+.fab i {
+  font-size: 2.1rem;
+}
 .fab-menu {
   position: fixed;
   bottom: 110px;
