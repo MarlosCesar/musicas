@@ -309,11 +309,7 @@ function showRenameModal(cifraId) {
   modal.querySelector("#close-rename-modal").onclick = () => document.body.removeChild(modal);
 }
 
-// --- FAB menu (ajuste para dois FABs) ---
-const fabBuscar = document.getElementById("fab-buscar");
-if (fabBuscar) fabBuscar.onclick = () => {
-  document.getElementById("file-input").click();
-};
+// --- FAB menu ---
 const fabBuscar2 = document.getElementById("fab-buscar2");
 if (fabBuscar2) fabBuscar2.onclick = () => {
   document.getElementById("fab-menu").classList.add("hidden");
