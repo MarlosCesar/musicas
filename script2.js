@@ -704,9 +704,9 @@ function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
   let fullscreenUrl = getProxiedUrl(cifra.url); // <-- Aqui usamos o proxy!
   overlay.innerHTML = `
-    <button class="close-fullscreen">&times;</button>
+     <button class="close-fullscreen">×</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
-      <img class="fullscreen-img" id="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
+      <img class="fullscreen-img" id="fullscreen-img" src="${getProxiedUrl(cifra.url)}" alt="${cifra.title}" />
       <div id="tone-controls" class="fullscreen-tone-controls hidden">
         <button id="tone-down">-</button>
         <span class="tone-label" id="tone-value">0</span>
@@ -718,19 +718,18 @@ function openFullscreen(cifra) {
       <span>Reconhecendo notas... Aguarde.</span>
     </div>
   `;
-  overlay.classList.remove("hidden");
-  overlay.querySelector(".close-fullscreen").onclick = () => {
+  
+  const img = overlay.querySelector('#fullscreen-img');
+  const closeBtn = overlay.querySelector('.close-fullscreen');
+  closeBtn.classList.remove('visible');
+  img.addEventListener('click', function() {
+    closeBtn.classList.toggle('visible');
+  });
+  closeBtn.onclick = () => {
     overlay.classList.add("hidden");
     if (document.fullscreenElement) document.exitFullscreen();
   };
-  overlay.onclick = e => { 
-    if (e.target === overlay) {
-      overlay.classList.add("hidden");
-      if (document.fullscreenElement) document.exitFullscreen();
-    }
-  };
-  if (overlay.requestFullscreen) overlay.requestFullscreen();
-
+}
   // === Zoom e Pan ===
   const img = document.getElementById("fullscreen-img");
   let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
@@ -932,18 +931,6 @@ function openFullscreen(cifra) {
     renderOverlays();
   };
 }
-
-// Ao criar overlay em fullscreen:
-const overlay = document.getElementById("fullscreen-overlay");
-const closeBtn = overlay.querySelector('.close-fullscreen');
-closeBtn.classList.remove('visible');
-img.addEventListener('click', function() {
-  closeBtn.classList.toggle('visible');
-});
-closeBtn.onclick = () => {
-  overlay.classList.add("hidden");
-  if (document.fullscreenElement) document.exitFullscreen();
-};
 
 // --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
