@@ -416,22 +416,35 @@ function showRenameModal(cifraId) {
 }
 
 // --- FAB menu ---
-const fabBuscar2 = document.getElementById("fab-buscar2");
-if (fabBuscar2) fabBuscar2.onclick = () => {
+// Exibe/esconde o menu ao clicar no FAB
+document.getElementById("fab").onclick = (e) => {
+  const fabMenu = document.getElementById("fab-menu");
+  fabMenu.classList.toggle("hidden");
+  e.stopPropagation(); // Impede o clique de propagar e fechar imediatamente
+};
+
+// Fecha o FAB menu ao clicar em qualquer parte da tela fora do próprio FAB e menu
+document.addEventListener('click', (e) => {
+  const fab = document.getElementById('fab');
+  const fabMenu = document.getElementById('fab-menu');
+  if (!fabMenu || !fab) return;
+  // Só fecha se o menu estiver aberto, e o clique não for nem no FAB nem dentro do menu
+  if (!fabMenu.classList.contains('hidden') && !fabMenu.contains(e.target) && e.target !== fab) {
+    fabMenu.classList.add('hidden');
+  }
+});
+
+document.getElementById("fab-buscar")?.addEventListener('click', () => {
   document.getElementById("fab-menu").classList.add("hidden");
   document.getElementById("file-input").click();
-};
+});
 
-document.getElementById("fab").onclick = () => {
-  document.getElementById("fab-menu").classList.toggle("hidden");
-};
-
-document.getElementById("fab-camera").onclick = () => {
+document.getElementById("fab-camera")?.addEventListener('click', () => {
   document.getElementById("fab-menu").classList.add("hidden");
   openCameraCapture();
-};
+});
 
-document.getElementById("fab-upload").onclick = async () => {
+document.getElementById("fab-upload")?.addEventListener('click', async () => {
   document.getElementById("fab-menu").classList.add("hidden");
   const tab = state.currentTab;
   const selected = Array.from(state.selection[tab] || []);
@@ -444,7 +457,7 @@ document.getElementById("fab-upload").onclick = async () => {
     if (cifra) await uploadCifraToDrive(cifra);
   }
   toast("Upload realizado para o Google Drive!");
-};
+});
 
 // --- File input upload (BASE64) ---
 document.getElementById("file-input").onchange = async (e) => {
