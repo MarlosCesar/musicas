@@ -3,9 +3,9 @@
   --primary: #1a202c;
   --primary-light: #247a7a;
   --primary-xlight: #f5f7f9;
-  --accent: #8b5cf6;
-  --accent-hover: #7c3aed;
-  --tab-online: #4f46e5;
+  --accent: #89CFF0;            
+  --accent-hover: #61b3e6;     
+  --tab-online: #89CFF0;
   --tab-offline: #bbbbbb;
   --gray-bg: #f5f8f8;
   --gray-text: #475151;
@@ -128,7 +128,7 @@ body {
   position: fixed;
   bottom: 32px;
   right: 32px;
-  background: linear-gradient(90deg, #8b5cf6, #4f46e5);
+  background: linear-gradient(90deg, #89CFF0, #61b3e6);
   color: #fff;
   border: none;
   border-radius: 50%;
@@ -145,7 +145,7 @@ body {
   gap: 0.5rem;
 }
 .fab:hover {
-  background: linear-gradient(90deg, #7c3aed, #4f46e5);
+  background: linear-gradient(90deg, #61b3e6, #89CFF0);
 }
 .fab i {
   font-size: 2.1rem;
@@ -292,12 +292,11 @@ body {
 .fullscreen-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.93);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: #000;
   z-index: 10000;
-  flex-direction: column;
+}
+html, body {
+  overscroll-behavior-y: contain;
 }
 .fullscreen-img-wrapper {
   width: 100vw;
@@ -602,4 +601,40 @@ body {
 .autocomplete-active {
   background: var(--accent-xlight, #ffe3d3);
   color: var(--accent, #ff6d39);
+}
+
+[data-theme='dark'] {
+  --primary: #e7e7e7;
+  --primary-xlight: #2a3440;
+  --gray-bg: #16202a;
+  --gray-text: #e5e5e5;
+  --white: #232f3a;
+  --accent: #89CFF0;
+  --accent-hover: #61b3e6;
+}
+body, .app-container, .fullscreen-overlay {
+  transition: background 0.4s, color 0.4s;
+}
+
+.nota-sobreposta {
+  position: absolute;
+  background: #fff;
+  color: #222;
+  font-weight: bold;
+  border-radius: 4px;
+  padding: 1px 7px;
+  font-size: 1.1em;
+  box-shadow: 0 1px 2px #999;
+  pointer-events: none;
+  z-index: 10021;
+  opacity: 0.96;
+}
+.close-fullscreen {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.close-fullscreen.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
