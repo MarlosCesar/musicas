@@ -30,6 +30,129 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
+function renderTabs() {
+  const tabsElem = document.getElementById("tabs");
+  tabsElem.innerHTML = "";
+  state.tabs.forEach((tab, idx) => {
+    const btn = document.createElement("button");
+    btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
+    btn.tabIndex = 0;
+
+    // Aba em edição
+    if (editingTabIndex === idx) {
+      btn.style.position = "relative";
+      btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent);" autofocus />`;
+      const actions = document.createElement("div");
+      actions.className = "suspended-actions";
+
+      // OK
+      const ok = document.createElement("button");
+      ok.textContent = "✅ OK";
+      ok.className = "tab-action-btn";
+      ok.onclick = (e) => {
+        e.stopPropagation();
+        const val = btn.querySelector("input").value.trim();
+        if (val !== "") {
+          state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
+          state.cifras[val] = [];
+          editingTabIndex = null;
+          newTabValue = "";
+          saveState();
+          renderTabs();
+          setTab(val);
+        }
+      };
+
+      // Limpar
+      const clear = document.createElement("button");
+      clear.textContent = "🧹 Limpar";
+      clear.className = "tab-action-btn";
+      clear.onclick = (e) => {
+        e.stopPropagation();
+        btn.querySelector("input").value = "";
+        btn.querySelector("input").focus();
+        newTabValue = "";
+      };
+
+      // Cancelar
+      const cancel = document.createElement("button");
+      cancel.textContent = "❌ Cancelar";
+      cancel.className = "tab-action-btn";
+      cancel.onclick = (e) => {
+        e.stopPropagation();
+        state.tabs.splice(idx, 1);
+        editingTabIndex = null;
+        newTabValue = "";
+        renderTabs();
+      };
+
+      actions.appendChild(ok);
+      actions.appendChild(clear);
+      actions.appendChild(cancel);
+      btn.appendChild(actions);
+
+      setTimeout(() => {
+        const input = btn.querySelector("input");
+        if (input) {
+          input.focus();
+          input.selectionStart = input.value.length;
+          input.oninput = (e) => newTabValue = e.target.value;
+          input.onkeydown = (e) => {
+            if (e.key === "Enter") ok.onclick(e);
+            if (e.key === "Escape") cancel.onclick(e);
+          };
+        }
+      }, 10);
+    } else {
+      btn.textContent = tab.name;
+      btn.onclick = () => setTab(tab.name);
+
+      // Aba customizada: "x" vermelho no topo direito, com hover/touch
+      if (tab.type === "custom") {
+        const close = document.createElement("button");
+        close.innerHTML = "&#10006;";
+        close.title = "Excluir aba";
+        close.className = "tab-close";
+        close.onclick = (e) => {
+          e.stopPropagation();
+          const removed = state.tabs.splice(idx, 1)[0];
+          delete state.cifras[removed.name];
+          if (state.currentTab === removed.name) {
+            setTab(state.tabs[0]?.name || "");
+          } else {
+            renderTabs();
+            renderCifras();
+          }
+          saveState();
+        };
+        btn.classList.add('custom');
+        btn.appendChild(close);
+
+        // Mostrar "x" ao toque (mobile)
+        btn.addEventListener('touchstart', (e) => {
+          btn.classList.toggle('tab-show-x');
+          setTimeout(() => btn.classList.remove('tab-show-x'), 2000);
+        });
+      }
+    }
+    tabsElem.appendChild(btn);
+  });
+
+  // Botão "+"
+  const addBtn = document.createElement("button");
+  addBtn.className = "tab-add";
+  addBtn.innerHTML = "<i class='fas fa-plus'></i>";
+  addBtn.onclick = () => {
+    if (editingTabIndex !== null) return;
+    state.tabs.push({ name: "", type: "custom", mode: "offline" });
+    editingTabIndex = state.tabs.length - 1;
+    newTabValue = "";
+    renderTabs();
+  };
+  tabsElem.appendChild(addBtn);
+  handleTabScrollArrows();
+}
+
 // --- Função para converter File em base64 (data URL) ---
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
