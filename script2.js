@@ -30,6 +30,30 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
+// Adicione ao início do arquivo:
+function setTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+}
+function getSavedTheme() {
+  return localStorage.getItem('theme') || 'light';
+}
+function toggleTheme() {
+  const current = getSavedTheme();
+  setTheme(current === 'dark' ? 'light' : 'dark');
+}
+
+// Ao carregar a página, aplique o tema salvo
+window.addEventListener('DOMContentLoaded', () => {
+  setTheme(getSavedTheme());
+});
+
+// No final do arquivo ou junto aos outros event listeners:
+document.getElementById('fab-darkmode').addEventListener('click', () => {
+  toggleTheme();
+  document.getElementById('fab-menu').classList.add('hidden');
+});
+
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
   tabsElem.innerHTML = "";
@@ -502,7 +526,7 @@ async function openCameraCapture() {
   let stream = null;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-  video: { facingMode: { exact: "environment" } }
+  video: { facingMode: "environment" }
 });
     video.srcObject = stream;
   } catch (e) {
@@ -908,6 +932,17 @@ function openFullscreen(cifra) {
     renderOverlays();
   };
 }
+
+// Ao criar overlay em fullscreen:
+const closeBtn = overlay.querySelector('.close-fullscreen');
+closeBtn.classList.remove('visible');
+img.addEventListener('click', function() {
+  closeBtn.classList.toggle('visible');
+});
+closeBtn.onclick = () => {
+  overlay.classList.add("hidden");
+  if (document.fullscreenElement) document.exitFullscreen();
+};
 
 // --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
