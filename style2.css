@@ -50,51 +50,66 @@ body {
   flex-direction: column;
   align-items: flex-end;
 }
+/* Caixa de busca visual moderna */
 .search-bar {
-  background: var(--primary-xlight);
-  border: none;
-  border-radius: 9999px;
-  padding: 12px 20px 12px 44px;
-  width: 100%;
-  font-size: 1.12rem;
-  color: var(--primary);
+  width: 260px;
+  padding: 10px 36px 10px 14px;
+  font-size: 1.08em;
+  color: #222;
+  background: #f8f9fa;
+  border: 1.5px solid var(--accent, #ff6d39);
+  border-radius: 999px;
   outline: none;
-  box-sizing: border-box;
-  margin-bottom: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(255, 109, 57, 0.06);
+  margin-right: 12px;
 }
+
+.search-bar:focus {
+  border-color: var(--accent-hover, #ff9875);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(255, 109, 57, 0.10);
+}
+
+.search-bar::placeholder {
+  color: #b0b4b9;
+  letter-spacing: 0.01em;
+}
+
 .search-dropdown {
   position: absolute;
   left: 0;
-  top: 120%;
-  width: 100%;
-  min-width: 180px;
-  background: var(--white);
-  border-radius: 0 0 var(--radius) var(--radius);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.08);
-  z-index: 33;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  font-size: 1rem;
-  max-height: 270px;
+  right: 0;
+  top: 100%;
+  background: #fff;
+  border: 1.5px solid var(--accent, #ff6d39);
+  border-top: none;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 4px 16px rgba(255, 109, 57, 0.12);
+  max-height: 260px;
   overflow-y: auto;
-  transition: width 0.2s;
+  z-index: 99;
+  padding: 0;
 }
+
 .search-dropdown li {
-  padding: 10px 22px;
+  padding: 10px 16px;
   cursor: pointer;
-  transition: background 0.13s;
-  border-bottom: 1px solid #f1f1f1;
+  color: #222;
+  font-size: 1.06em;
+  border-bottom: 1px solid #f3e9e4;
+  list-style: none;
 }
+
 .search-dropdown li:last-child {
   border-bottom: none;
 }
-.search-dropdown li:hover, .search-dropdown li.active {
-  background: var(--primary-xlight);
+
+.search-dropdown li.selected,
+.search-dropdown li:hover {
+  background: var(--accent-xlight, #ffe3d3);
+  color: var(--accent, #ff6d39);
 }
-.search-dropdown.hidden { display: none; }
 .fab {
   position: fixed;
   bottom: 32px;
