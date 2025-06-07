@@ -971,7 +971,7 @@ function normalizeNote(note) {
   }
 }
 function transposeChord(chord, semitones) {
-  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?$/;
+  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
   const match = chord.match(regex);
   if (!match) return chord;
   let root = normalizeNote(match[1]);
@@ -991,7 +991,7 @@ function transposeChord(chord, semitones) {
       newBass = "/" + bass;
     }
   }
-  return `<span class="nota-sobreposta">${newRoot}${suffix}${newBass}</span>`;
+  return `${newRoot}${suffix}${newBass}`;
 }
 function transposeTextCifra(text, semitones) {
   const chordRegex = /\b([A-G](#|b)?([a-z0-9º°+\-\(\)]*)?(\/[A-G](#|b)?)?)\b/g;
