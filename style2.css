@@ -599,3 +599,52 @@ body {
   color: var(--primary);
   margin: 0 8px;
 }
+
+/* Estilo para nota sobreposta da transposição */
+.nota-sobreposta {
+  background: #fff;
+  color: #222;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font-weight: bold;
+  box-shadow: 0 1px 2px #bbb;
+  margin: 0 1px;
+  font-family: inherit;
+  white-space: pre;
+}
+
+/* Controles de tonalidade em fullscreen texto */
+.fullscreen-tone-controls {
+  position: absolute;
+  top: 60px;
+  right: 40px;
+  background: rgba(255,255,255,0.98);
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.14);
+  padding: 14px 22px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 18px;
+  z-index: 10010;
+  font-size: 1.2em;
+}
+.fullscreen-tone-controls button {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  font-size: 1.35em;
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.fullscreen-tone-controls button:hover {
+  background: var(--accent-hover);
+}
+.fullscreen-tone-controls .tone-label {
+  font-weight: bold;
+  color: var(--primary);
+  margin: 0 8px;
+}
