@@ -28,6 +28,16 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
+// --- Função para converter File em base64 (data URL) ---
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 function waitForGapi() {
   return new Promise((resolve, reject) => {
     if (window.gapi) return resolve();
@@ -338,33 +348,25 @@ document.getElementById("fab-upload").onclick = async () => {
   toast("Upload realizado para o Google Drive!");
 };
 
-// --- Conversão de arquivo para base64 ---
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// --- File input upload ---
+// --- File input upload (ALTERAÇÃO PARA BASE64) ---
 document.getElementById("file-input").onchange = async (e) => {
   const files = Array.from(e.target.files || []);
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
+  let addedCount = 0;
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue;
-    const base64 = await fileToBase64(file); // Aqui converte para base64!
+    const base64 = await fileToBase64(file); // Usa base64!
     const id = Math.random().toString(36).slice(2) + Date.now();
     state.cifras[tab].push({ id, url: base64, title: file.name });
+    addedCount++;
   }
   saveState();
   renderCifras();
-  toast(`${files.length} cifra(s) adicionada(s)!`);
+  toast(`${addedCount} cifra(s) adicionada(s)!`);
 };
 
-// --- Camera Capture ---
+// --- Camera Capture (ALTERAÇÃO PARA BASE64) ---
 async function openCameraCapture() {
   let overlay = document.getElementById("camera-capture-overlay");
   if (overlay) overlay.remove();
@@ -409,29 +411,29 @@ async function openCameraCapture() {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob(blob => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-      overlay.remove();
+    // Salvar como base64
+    const base64 = canvas.toDataURL("image/jpeg", 0.92);
 
-      const url = URL.createObjectURL(blob);
-      const now = new Date();
-      const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}.${now.getSeconds().toString().padStart(2,"0")}.jpg`;
-      const id = "foto-" + now.getTime();
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    overlay.remove();
 
-      const tab = state.currentTab;
-      if (!state.cifras[tab]) state.cifras[tab] = [];
-      state.cifras[tab].push({
-        id,
-        title,
-        url,
-        createdAt: now.toISOString()
-      });
-      if (!state.selection[tab]) state.selection[tab] = new Set();
-      state.selection[tab].add(id);
+    const now = new Date();
+    const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}`;
+    const id = "foto-" + now.getTime();
 
-      saveState();
-      renderCifras();
-    }, "image/jpeg", 0.92);
+    const tab = state.currentTab;
+    if (!state.cifras[tab]) state.cifras[tab] = [];
+    state.cifras[tab].push({
+      id,
+      title,
+      url: base64,
+      createdAt: now.toISOString()
+    });
+    if (!state.selection[tab]) state.selection[tab] = new Set();
+    state.selection[tab].add(id);
+
+    saveState();
+    renderCifras();
   };
 }
 
@@ -540,47 +542,6 @@ document.getElementById("search-bar").onblur = () => setTimeout(() => {
   document.getElementById("search-dropdown").classList.add("hidden");
 }, 200);
 
-// --- Search bar e dropdown de busca ---
-document.getElementById("search-bar").oninput = async (e) => {
-  const val = e.target.value.trim();
-  state.search = val;
-  renderCifras();
-  const dropdown = document.getElementById("search-dropdown");
-  if (val.length === 0) {
-    dropdown.classList.add("hidden");
-    dropdown.innerHTML = "";
-    return;
-  }
-  dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
-  dropdown.classList.remove("hidden");
-  const files = await searchDrive(val);
-  dropdown.innerHTML = "";
-  if (!files.length) {
-    dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
-    return;
-  }
-  files.forEach(f => {
-    const li = document.createElement("li");
-    li.textContent = stripExtension(f.name);
-    li.onclick = () => {
-      addCifraFromDrive(f);
-      dropdown.classList.add("hidden");
-      document.getElementById("search-bar").value = "";
-      state.search = "";
-      renderCifras();
-    };
-    dropdown.appendChild(li);
-  });
-};
-
-document.getElementById("search-bar").onfocus = () => {
-  if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
-};
-
-document.getElementById("search-bar").onblur = () => setTimeout(() => {
-  document.getElementById("search-dropdown").classList.add("hidden");
-}, 200);
-
 // --- Adicionar cifra da nuvem ---
 function addCifraFromDrive(file) {
   const tab = state.currentTab;
@@ -604,7 +565,7 @@ function addCifraFromDrive(file) {
 // --- Google Drive Search ---
 async function searchDrive(query) {
   if (!query) return [];
-  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink,iconLink,mimeType)&key=${GOOGLE_API_KEY}`;
+  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink)&key=${GOOGLE_API_KEY}`;
   const resp = await fetch(url);
   if (!resp.ok) return [];
   const data = await resp.json();
@@ -613,22 +574,28 @@ async function searchDrive(query) {
 
 // --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
 function getProxiedUrl(originalUrl) {
+  // Não usar proxy para base64 ou blob!
+  if (originalUrl.startsWith('data:') || originalUrl.startsWith('blob:')) {
+    return originalUrl;
+  }
   return "https://cors-proxy-cifras.onrender.com/proxy?url=" + encodeURIComponent(originalUrl);
 }
 
 function openFullscreen(cifra) {
   const overlay = document.getElementById("fullscreen-overlay");
-  let fullscreenUrl = getProxiedUrl(cifra.url);
+  let fullscreenUrl = getProxiedUrl(cifra.url); // Usa proxy só se for URL externa
+  console.log("URL usada na imagem fullscreen:", fullscreenUrl);
+  let isTextCifra = !!cifra.text;
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div class="fullscreen-img-wrapper" style="position:relative;">
       <img class="fullscreen-img" id="fullscreen-img" src="${fullscreenUrl}" alt="${cifra.title}" />
-      <div id="overlay-notes" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:10020;display:none;"></div>
       <div id="tone-controls" class="fullscreen-tone-controls hidden">
         <button id="tone-down">-</button>
         <span class="tone-label" id="tone-value">0</span>
         <button id="tone-up">+</button>
       </div>
+      <div id="overlay-notes"></div>
     </div>
     <div id="transp-overlay-msg" style="position:absolute;bottom:40px;left:0;right:0;text-align:center;font-size:1.2em;color:#fff;text-shadow:0 2px 8px #000;display:none;">
       <span>Reconhecendo notas... Aguarde.</span>
@@ -647,17 +614,10 @@ function openFullscreen(cifra) {
   };
   if (overlay.requestFullscreen) overlay.requestFullscreen();
 
-  // --- VARIÁVEIS PARA ZOOM/PAN ---
+  // === Zoom e Pan ===
   const img = document.getElementById("fullscreen-img");
-  const overlayNotes = document.getElementById("overlay-notes");
   let scale = 1, lastScale = 1, startX = 0, startY = 0, lastX = 0, lastY = 0, isDragging = false;
   let pinchStartDist = null, pinchStartScale = null;
-
-  // --- ZOOM/PAN (mantém overlay sincronizado) ---
-  function syncOverlayTransform() {
-    overlayNotes.style.transformOrigin = img.style.transformOrigin;
-    overlayNotes.style.transform = img.style.transform;
-  }
   img.onwheel = function(e) {
     e.preventDefault();
     const rect = img.getBoundingClientRect();
@@ -667,7 +627,6 @@ function openFullscreen(cifra) {
     scale = Math.max(0.5, Math.min(5, scale * delta));
     img.style.transformOrigin = `${offsetX}px ${offsetY}px`;
     img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-    syncOverlayTransform();
   };
   img.onmousedown = function(e) {
     isDragging = true;
@@ -680,7 +639,6 @@ function openFullscreen(cifra) {
       lastX = e.clientX - startX;
       lastY = e.clientY - startY;
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-      syncOverlayTransform();
     }
   };
   overlay.onmouseup = function() { isDragging = false; };
@@ -706,13 +664,11 @@ function openFullscreen(cifra) {
       );
       scale = Math.max(0.5, Math.min(5, pinchStartScale * dist / pinchStartDist));
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-      syncOverlayTransform();
       e.preventDefault();
     } else if (e.touches.length === 1 && isDragging) {
       lastX = e.touches[0].clientX - startX;
       lastY = e.touches[0].clientY - startY;
       img.style.transform = `scale(${scale}) translate(${lastX}px, ${lastY}px)`;
-      syncOverlayTransform();
       e.preventDefault();
     }
   };
@@ -729,8 +685,6 @@ function openFullscreen(cifra) {
   img.ondblclick = function(e) {
     scale = 1; lastX = 0; lastY = 0;
     img.style.transform = '';
-    overlayNotes.style.transform = '';
-    overlayNotes.style.transformOrigin = '';
   };
   img.ontouchend = function(e) {
     if (e.touches.length === 0) {
@@ -738,42 +692,62 @@ function openFullscreen(cifra) {
       if (now - lastTapTime < 350) {
         scale = 1; lastX = 0; lastY = 0;
         img.style.transform = '';
-        overlayNotes.style.transform = '';
-        overlayNotes.style.transformOrigin = '';
       }
       lastTapTime = now;
       isDragging = false;
     }
   };
 
-  // --- OCR E OVERLAY DE NOTAS (triple click para ativar) ---
+  // ---- OCR e Overlay de Notas ----
+  const overlayNotes = document.getElementById("overlay-notes");
   const transpMsg = document.getElementById("transp-overlay-msg");
   const controls = document.getElementById("tone-controls");
   let currentTone = 0;
   let notesData = [];
-  let tripleClickTimer = null, tripleClickCount = 0, ocrActivated = false;
+
+  // Função de transposição (cromática, com sufixos)
+  const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+  function normalizeNote(note) {
+    switch(note) {
+      case "Db": return "C#";
+      case "Eb": return "D#";
+      case "Gb": return "F#";
+      case "Ab": return "G#";
+      case "Bb": return "A#";
+      default: return note;
+    }
+  }
+  function transposeChord(chord, semitones) {
+    const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
+    const match = chord.match(regex);
+    if (!match) return chord;
+    let root = normalizeNote(match[1]);
+    let suffix = match[3] || "";
+    let bass = match[5] ? normalizeNote(match[5]) : null;
+    let idx = NOTES_SHARP.indexOf(root);
+    if (idx === -1) return chord;
+    let newIdx = (idx + semitones + 12) % 12;
+    let newRoot = NOTES_SHARP[newIdx];
+    let newBass = "";
+    if (bass) {
+      let idxBass = NOTES_SHARP.indexOf(bass);
+      if (idxBass !== -1) {
+        let newIdxBass = (idxBass + semitones + 12) % 12;
+        newBass = "/" + NOTES_SHARP[newIdxBass];
+      } else {
+        newBass = "/" + bass;
+      }
+    }
+    return `${newRoot}${suffix}${newBass}`;
+  }
 
   function renderOverlays() {
     overlayNotes.innerHTML = "";
-    // --- Cálculo para alinhar overlay exatamente sobre a imagem ---
-    const wrapper = img.parentElement;
-    const wrapperRect = wrapper.getBoundingClientRect();
-    const imgRect = img.getBoundingClientRect();
-    // Calcula offset da imagem dentro da área wrapper (por centralização)
-    const offsetX = imgRect.left - wrapperRect.left;
-    const offsetY = imgRect.top - wrapperRect.top;
-    // Escala real da imagem exibida para natural
-    const scaleX = img.width / img.naturalWidth;
-    const scaleY = img.height / img.naturalHeight;
-    // Posiciona overlays considerando offset E escala
     notesData.forEach(note => {
       const div = document.createElement("div");
       div.style.position = "absolute";
-      // As coordenadas do Tesseract são relativas à naturalWidth/Height
-      div.style.left = `${offsetX + note.bbox.x0 * scaleX}px`;
-      div.style.top = `${offsetY + note.bbox.y0 * scaleY}px`;
-      div.style.width = `${(note.bbox.x1 - note.bbox.x0) * scaleX}px`;
-      div.style.height = `${(note.bbox.y1 - note.bbox.y0) * scaleY}px`;
+      div.style.left = `${note.bbox.x0}px`;
+      div.style.top = `${note.bbox.y0}px`;
       div.style.background = "#fff";
       div.style.color = "#222";
       div.style.fontWeight = "bold";
@@ -783,9 +757,6 @@ function openFullscreen(cifra) {
       div.style.boxShadow = "0 1px 2px #999";
       div.style.pointerEvents = "none";
       div.style.zIndex = "10020";
-      div.style.display = "flex";
-      div.style.alignItems = "center";
-      div.style.justifyContent = "center";
       div.textContent = transposeChord(note.text, currentTone);
       overlayNotes.appendChild(div);
     });
@@ -794,9 +765,11 @@ function openFullscreen(cifra) {
   function detectNotes() {
     transpMsg.style.display = "block";
     overlayNotes.innerHTML = "";
+    // Use o src da imagem (que já está proxificado) no Tesseract:
     Tesseract.recognize(img.src, 'eng', {
       logger: m => { transpMsg.querySelector("span").textContent = "Reconhecendo: " + (m.progress*100).toFixed(0) + "%"; }
     }).then(({ data }) => {
+      console.log(data);
       notesData = [];
       (data.words||[]).forEach(wordObj => {
         if (/^[A-G][#b]?(m|sus|dim|aug|add|maj|min|[0-9]*)?$/i.test(wordObj.text.trim())) {
@@ -810,7 +783,6 @@ function openFullscreen(cifra) {
         transpMsg.querySelector("span").textContent = "Nenhuma nota reconhecida. Melhore a imagem ou tente outro idioma.";
         setTimeout(()=>{ transpMsg.style.display = "none"; }, 3000);
       } else {
-        overlayNotes.style.display = "";
         renderOverlays();
         transpMsg.style.display = "none";
         controls.classList.remove("hidden");
@@ -818,40 +790,10 @@ function openFullscreen(cifra) {
     });
   }
 
-  function handleTripleClick() {
-    if (ocrActivated) return;
-    ocrActivated = true;
-    overlayNotes.style.display = "";
-    transpMsg.style.display = "";
-    detectNotes();
-  }
+  img.onload = detectNotes;
+  if (img.complete) detectNotes();
 
-  img.addEventListener('click', function() {
-    tripleClickCount++;
-    if (tripleClickCount === 3) {
-      handleTripleClick();
-      tripleClickCount = 0;
-      clearTimeout(tripleClickTimer);
-    } else {
-      clearTimeout(tripleClickTimer);
-      tripleClickTimer = setTimeout(()=>{ tripleClickCount = 0; }, 500);
-    }
-  });
-  img.addEventListener('touchend', function(e) {
-    if (e.touches.length === 0) {
-      tripleClickCount++;
-      if (tripleClickCount === 3) {
-        handleTripleClick();
-        tripleClickCount = 0;
-        clearTimeout(tripleClickTimer);
-      } else {
-        clearTimeout(tripleClickTimer);
-        tripleClickTimer = setTimeout(()=>{ tripleClickCount = 0; }, 700);
-      }
-    }
-  });
-
-  // --- CONTROLES DE TONALIDADE ---
+  // Controles de tonalidade
   document.getElementById("tone-up").onclick = () => {
     currentTone++;
     document.getElementById("tone-value").textContent = currentTone > 0 ? `+${currentTone}` : currentTone;
@@ -864,31 +806,7 @@ function openFullscreen(cifra) {
   };
 }
 
-// Função transposeChord deve retornar apenas TEXTO PURO!
-function transposeChord(chord, semitones) {
-  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
-  const match = chord.match(regex);
-  if (!match) return chord;
-  let root = normalizeNote(match[1]);
-  let suffix = match[3] || "";
-  let bass = match[5] ? normalizeNote(match[5]) : null;
-  let idx = NOTES_SHARP.indexOf(root);
-  if (idx === -1) return chord;
-  let newIdx = (idx + semitones + 12) % 12;
-  let newRoot = NOTES_SHARP[newIdx];
-  let newBass = "";
-  if (bass) {
-    let idxBass = NOTES_SHARP.indexOf(bass);
-    if (idxBass !== -1) {
-      let newIdxBass = (idxBass + semitones + 12) % 12;
-      newBass = "/" + NOTES_SHARP[newIdxBass];
-    } else {
-      newBass = "/" + bass;
-    }
-  }
-  return `${newRoot}${suffix}${newBass}`;
-}
-
+// --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
   await gapiAuth();
 
@@ -926,6 +844,7 @@ async function uploadCifraToDrive(cifra) {
     alert('Falha ao fazer upload para o Google Drive!');
   }
 }
+
 // --- Selection helpers ---
 function isSelected(id) {
   const tab = state.currentTab;
@@ -1081,7 +1000,7 @@ function normalizeNote(note) {
   }
 }
 function transposeChord(chord, semitones) {
-  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?/;
+  const regex = /^([A-G](#|b)?)([^/\s]*)?(\/([A-G](#|b)?))?$/;
   const match = chord.match(regex);
   if (!match) return chord;
   let root = normalizeNote(match[1]);
@@ -1101,7 +1020,7 @@ function transposeChord(chord, semitones) {
       newBass = "/" + bass;
     }
   }
-  return `${newRoot}${suffix}${newBass}`;
+  return `<span class="nota-sobreposta">${newRoot}${suffix}${newBass}</span>`;
 }
 function transposeTextCifra(text, semitones) {
   const chordRegex = /\b([A-G](#|b)?([a-z0-9º°+\-\(\)]*)?(\/[A-G](#|b)?)?)\b/g;
@@ -1118,7 +1037,7 @@ function abrirCifraTextoFullscreen() {
   overlay.innerHTML = `
     <button class="close-fullscreen">&times;</button>
     <div style="position:relative;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;">
-      <pre id="cifra-texto-full" style="font-size:1.1em;max-width:90vw;max-height:80vh;overflow:auto;background:#fff;color:#222;padding:25px 18px 18px 18px;border-radius:12px;box-shadow:0 2px 16px #0002;">
+      <pre id="cifra-texto-full" style="font-size:1.1em;max-width:90vw;max-height:80vh;overflow:auto;background:#fff;color:#222;padding:25px 18px 18px 18px;border-radius:12px;box-shadow:0 2px 16px #0008;">
       </pre>
       <div id="tone-controls-text" class="fullscreen-tone-controls hidden">
         <button id="tone-down-text">-</button>
