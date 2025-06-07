@@ -151,13 +151,6 @@ function renderTabs() {
     btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
     btn.textContent = tab.name;
     btn.onclick = () => setTab(tab.name);
-    if (tab.type === "default") {
-      const more = document.createElement("span");
-      more.className = "tab-more";
-      more.innerHTML = "&#8942;";
-      more.onclick = e => { e.stopPropagation(); showTabModeModal(tab); };
-      btn.appendChild(more);
-    }
     tabsElem.appendChild(btn);
   });
   const addBtn = document.createElement("button");
@@ -916,18 +909,18 @@ function showAddTabModal() {
 }
 
 // --- Modal: modo da aba ---
-function showTabModeModal(tab) {
-  const modal = document.getElementById("tab-mode-modal");
-  modal.classList.remove("hidden");
-  const radios = modal.querySelectorAll('input[name="tab-mode"]');
-  radios.forEach(r => r.checked = (r.value === (tab.mode || "offline")));
-  document.getElementById("save-tab-mode-btn").onclick = () => {
-    const mode = modal.querySelector('input[name="tab-mode"]:checked').value;
-    setTabMode(tab.name, mode);
-    modal.classList.add("hidden");
-  };
-  document.getElementById("close-tab-mode-modal").onclick = () => modal.classList.add("hidden");
-}
+//function showTabModeModal(tab) {
+ // const modal = document.getElementById("tab-mode-modal");
+//  modal.classList.remove("hidden");
+//  const radios = modal.querySelectorAll('input[name="tab-mode"]');
+  //radios.forEach(r => r.checked = (r.value === (tab.mode || "offline")));
+  //document.getElementById("save-tab-mode-btn").onclick = () => {
+    //const mode = modal.querySelector('input[name="tab-mode"]:checked').value;
+    //setTabMode(tab.name, mode);
+    //modal.classList.add("hidden");
+  //};
+  //document.getElementById("close-tab-mode-modal").onclick = () => modal.classList.add("hidden");
+//}
 
 // --- Modal: nuvem ---
 function showCloudModal(files=[]) {
