@@ -211,17 +211,6 @@ body {
 .tab.online { color: var(--tab-online); }
 .tab.offline.active { border-bottom: 3px solid var(--primary); }
 .tab.online.active { border-bottom: 3px solid var(--tab-online); }
-.tab .tab-more {
-  position: absolute;
-  right: 4px;
-  top: 4px;
-  font-size: 1.16em;
-  cursor: pointer;
-  opacity: 0.5;
-  transition: opacity 0.13s;
-  z-index: 5;
-}
-.tab .tab-more:hover { opacity: 1; }
 .tab .tab-close {
   display: none;
   position: absolute;
