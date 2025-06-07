@@ -1039,7 +1039,8 @@ function startPolling() {
 }
 
 // --- Algoritmo de transposição para cifra em texto ---
-const NOTES_SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const NOTES_SHARP = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+const NOTES_FLAT  = ["C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"];
 function normalizeNote(note) {
   switch(note) {
     case "Db": return "C#";
