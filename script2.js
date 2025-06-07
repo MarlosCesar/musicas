@@ -150,7 +150,6 @@ function renderTabs() {
     renderTabs();
   };
   tabsElem.appendChild(addBtn);
-  handleTabScrollArrows();
 }
 
 // --- Função para converter File em base64 (data URL) ---
@@ -928,46 +927,6 @@ function toast(msg) {
   t.textContent = msg;
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 2000);
-}
-
-// --- Tab scroll and arrows ---
-function handleTabScrollArrows() {
-  const tabs = document.getElementById("tabs");
-  const left = document.getElementById("tab-scroll-left");
-  const right = document.getElementById("tab-scroll-right");
-  function updateArrows() {
-    left.classList.toggle("visible", tabs.scrollLeft > 16);
-    right.classList.toggle("visible", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 16);
-  }
-  updateArrows();
-  tabs.onscroll = updateArrows;
-  document.body.onmousemove = e => {
-    const { clientX, clientY } = e;
-    if (clientY < 130) {
-      if (clientX < 40) left.classList.add("visible");
-      else left.classList.remove("visible");
-      if (window.innerWidth - clientX < 40) right.classList.add("visible");
-      else right.classList.remove("visible");
-    }
-  };
-  left.onclick = () => tabs.scrollBy({ left: -180, behavior: "smooth" });
-  right.onclick = () => tabs.scrollBy({ left: 180, behavior: "smooth" });
-  let isDown = false, startX, scrollLeft;
-  tabs.addEventListener('touchstart', e => {
-    isDown = true; startX = e.touches[0].pageX - tabs.offsetLeft; scrollLeft = tabs.scrollLeft;
-  });
-  tabs.addEventListener('touchend', () => isDown = false);
-  tabs.addEventListener('touchmove', e => {
-    if (!isDown) return;
-    const x = e.touches[0].pageX - tabs.offsetLeft;
-    tabs.scrollLeft = scrollLeft - (x - startX);
-  });
-  tabs.addEventListener('wheel', e => {
-    if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-      tabs.scrollLeft += e.deltaX;
-      e.preventDefault();
-    }
-  }, { passive: false });
 }
 
 // --- Modal: nuvem ---
