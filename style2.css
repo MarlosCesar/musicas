@@ -499,3 +499,78 @@ body {
 .tab input:focus {
   outline: 2px solid var(--accent-hover, #ff9875);
 }
+
+/* Estilo moderno para a caixa de busca */
+#search {
+  width: 260px;
+  padding: 10px 36px 10px 14px;
+  font-size: 1.08em;
+  color: #222;
+  background: #f8f9fa;
+  border: 1.5px solid var(--accent, #ff6d39);
+  border-radius: 999px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(255, 109, 57, 0.06);
+  margin-right: 12px;
+}
+
+#search:focus {
+  border-color: var(--accent-hover, #ff9875);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(255, 109, 57, 0.10);
+}
+
+#search::placeholder {
+  color: #b0b4b9;
+  letter-spacing: 0.01em;
+}
+
+/* Se quiser um ícone de lupa dentro do input */
+.search-container {
+  position: relative;
+  display: inline-block;
+}
+
+.search-container .search-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent, #ff6d39);
+  font-size: 1.1em;
+  pointer-events: none;
+}
+
+/* Mantém o visual do dropdown/autocomplete */
+.autocomplete-items {
+  position: absolute;
+  border: 1.5px solid var(--accent, #ff6d39);
+  border-top: none;
+  z-index: 99;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 4px 16px rgba(255, 109, 57, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.autocomplete-items div {
+  padding: 10px 16px;
+  cursor: pointer;
+  color: #222;
+  font-size: 1.06em;
+  border-bottom: 1px solid #f3e9e4;
+}
+
+.autocomplete-items div:last-child {
+  border-bottom: none;
+}
+
+.autocomplete-active {
+  background: var(--accent-xlight, #ffe3d3);
+  color: var(--accent, #ff6d39);
+}
