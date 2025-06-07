@@ -338,6 +338,16 @@ document.getElementById("fab-upload").onclick = async () => {
   toast("Upload realizado para o Google Drive!");
 };
 
+// --- Conversão de arquivo para base64 ---
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // --- File input upload ---
 document.getElementById("file-input").onchange = async (e) => {
   const files = Array.from(e.target.files || []);
@@ -345,9 +355,9 @@ document.getElementById("file-input").onchange = async (e) => {
   if (!state.cifras[tab]) state.cifras[tab] = [];
   for (const file of files) {
     if (!file.type.startsWith("image/")) continue;
-    const url = URL.createObjectURL(file);
+    const base64 = await fileToBase64(file); // Aqui converte para base64!
     const id = Math.random().toString(36).slice(2) + Date.now();
-    state.cifras[tab].push({ id, url, title: file.name });
+    state.cifras[tab].push({ id, url: base64, title: file.name });
   }
   saveState();
   renderCifras();
