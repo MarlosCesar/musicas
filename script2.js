@@ -504,6 +504,7 @@ async function openCameraCapture() {
   overlay.style.cssText = `
     z-index: 99999; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); display:flex; flex-direction:column; align-items:center; justify-content:center;
   `;
+
   overlay.innerHTML = `
     <video id="camera-video" autoplay playsinline style="width:100vw; height:100vh; object-fit:cover; background:#222"></video>
     <div style="margin:1em 0">
@@ -519,9 +520,14 @@ async function openCameraCapture() {
 
   let stream = null;
   try {
+    // Solicitar resolução máxima da câmera
     stream = await navigator.mediaDevices.getUserMedia({
-  video: { facingMode: { exact: "environment" } }
-});
+      video: {
+        width: { ideal: 1920 },
+        height: { ideal: 1080 },
+        facingMode: "environment" // ou "user" para frontal
+      }
+    });
     video.srcObject = stream;
   } catch (e) {
     overlay.remove();
@@ -535,34 +541,47 @@ async function openCameraCapture() {
   };
 
   captureBtn.onclick = () => {
+    // Esperar o vídeo estar pronto
+    if (video.readyState < 2) {
+      toast("Aguardando câmera...");
+      return;
+    }
+    // Captura na resolução real da câmera
+    const track = stream.getVideoTracks()[0];
+    const settings = track.getSettings();
+    const width = settings.width || video.videoWidth;
+    const height = settings.height || video.videoHeight;
+
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, width, height);
 
-    const base64 = canvas.toDataURL("image/jpeg", 0.92);
+    // JPEG de alta qualidade
+    canvas.toBlob(blob => {
+      if (stream) stream.getTracks().forEach(track => track.stop());
+      overlay.remove();
 
-    if (stream) stream.getTracks().forEach(track => track.stop());
-    overlay.remove();
+      const url = URL.createObjectURL(blob);
+      const now = new Date();
+      const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}`;
+      const id = "foto-" + now.getTime();
 
-    const now = new Date();
-    const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}`;
-    const id = "foto-" + now.getTime();
+      const tab = state.currentTab;
+      if (!state.cifras[tab]) state.cifras[tab] = [];
+      state.cifras[tab].push({
+        id,
+        title,
+        url,
+        createdAt: now.toISOString()
+      });
+      if (!state.selection[tab]) state.selection[tab] = new Set();
+      state.selection[tab].add(id);
 
-    const tab = state.currentTab;
-    if (!state.cifras[tab]) state.cifras[tab] = [];
-    state.cifras[tab].push({
-      id,
-      title,
-      url: base64,
-      createdAt: now.toISOString()
-    });
-    if (!state.selection[tab]) state.selection[tab] = new Set();
-    state.selection[tab].add(id);
-
-    saveState();
-    renderCifras();
+      saveState();
+      renderCifras();
+    }, "image/jpeg", 0.98); // Qualidade máxima
   };
 }
 
