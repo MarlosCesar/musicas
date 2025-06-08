@@ -267,10 +267,7 @@ function renderCifras() {
   const list = document.getElementById("cifra-list");
   const empty = document.getElementById("empty-state");
   const tab = state.currentTab;
-  let cifras = (state.cifras[tab] || []);
-  if (state.search && state.search.length > 0) {
-    cifras = cifras.filter(c => c.title.toLowerCase().includes(state.search.toLowerCase()));
-  }
+  let cifras = (state.cifras[tab] || []); // NÃO filtra mais por state.search
   list.innerHTML = "";
   if (!cifras.length) {
     empty.style.display = "flex";
@@ -295,12 +292,9 @@ function renderCifras() {
 
       const img = document.createElement("img");
       img.className = "cifra-img";
-      
-      if (cifra.driveId) {
-        img.src = `https://drive.google.com/thumbnail?id=${cifra.driveId}&sz=w200`;
-      } else {
-        img.src = cifra.url;
-      }
+      img.src = cifra.driveId
+        ? `https://drive.google.com/thumbnail?id=${cifra.driveId}&sz=w200`
+        : cifra.url;
       img.alt = cifra.title;
       img.onclick = e => { openFullscreen(cifra); e.stopPropagation(); };
 
@@ -688,7 +682,6 @@ function updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab)
         const searchBar = document.getElementById("search-bar");
         if (searchBar) searchBar.value = "";
         state.search = "";
-        renderCifras();
         dropdown.classList.add("hidden");
       });
       dropdown.appendChild(li);
