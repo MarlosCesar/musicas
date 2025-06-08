@@ -128,14 +128,14 @@ body {
   position: fixed;
   bottom: 32px;
   right: 32px;
-  background: linear-gradient(90deg, #8b5cf6, #4f46e5);
+  background: linear-gradient(135deg, #6495ED 0%, #89CFF0 100%);
   color: #fff;
   border: none;
   border-radius: 50%;
   width: 64px;
   height: 64px;
   font-size: 2.4rem;
-  box-shadow: 0 2px 16px rgba(139,92,246,0.23);
+  box-shadow: 0 2px 16px rgba(100,149,237,0.27); /* sombra no tom do azul */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -145,7 +145,7 @@ body {
   gap: 0.5rem;
 }
 .fab:hover {
-  background: linear-gradient(90deg, #7c3aed, #4f46e5);
+  background: linear-gradient(135deg, #4177cc 0%, #6db5e6 100%);
 }
 .fab i {
   font-size: 2.1rem;
