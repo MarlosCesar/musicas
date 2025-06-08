@@ -435,14 +435,17 @@ body.dark-mode .cifra-title {
 /* Fullscreen overlay */
 .fullscreen-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.93);
+  z-index: 99999;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.85);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
-  flex-direction: column;
 }
+
 body.dark-mode .fullscreen-overlay {
   background: rgba(20,26,34,0.98);
 }
