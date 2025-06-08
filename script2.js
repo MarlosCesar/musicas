@@ -518,13 +518,13 @@ async function openCameraCapture() {
 
   let stream = null;
   try {
-    // Solicitar resolução máxima da câmera
     stream = await navigator.mediaDevices.getUserMedia({
       video: {
         width: { ideal: 1920 },
         height: { ideal: 1080 },
-        facingMode: "environment" // ou "user" para frontal
-      }
+        facingMode: { exact: "environment" }
+      },
+      audio: false
     });
     video.srcObject = stream;
   } catch (e) {
@@ -539,12 +539,10 @@ async function openCameraCapture() {
   };
 
   captureBtn.onclick = () => {
-    // Esperar o vídeo estar pronto
     if (video.readyState < 2) {
       toast("Aguardando câmera...");
       return;
     }
-    // Captura na resolução real da câmera
     const track = stream.getVideoTracks()[0];
     const settings = track.getSettings();
     const width = settings.width || video.videoWidth;
@@ -556,30 +554,24 @@ async function openCameraCapture() {
     const ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0, width, height);
 
-    // JPEG de alta qualidade
     canvas.toBlob(blob => {
       if (stream) stream.getTracks().forEach(track => track.stop());
       overlay.remove();
 
       const url = URL.createObjectURL(blob);
       const now = new Date();
-      const title = `Foto ${now.getFullYear()}-${(now.getMonth()+1).toString().padStart(2,"0")}-${now.getDate().toString().padStart(2,"0")} ${now.getHours().toString().padStart(2,"0")}.${now.getMinutes().toString().padStart(2,"0")}`;
+      const title = `Foto ${now.toISOString().replace(/[:T]/g, '-').split('.')[0]}`;
       const id = "foto-" + now.getTime();
 
       const tab = state.currentTab;
       if (!state.cifras[tab]) state.cifras[tab] = [];
-      state.cifras[tab].push({
-        id,
-        title,
-        url,
-        createdAt: now.toISOString()
-      });
+      state.cifras[tab].push({ id, title, url, createdAt: now.toISOString() });
       if (!state.selection[tab]) state.selection[tab] = new Set();
       state.selection[tab].add(id);
 
       saveState();
       renderCifras();
-    }, "image/jpeg", 0.98); // Qualidade máxima
+    }, "image/jpeg", 0.98);
   };
 }
 
@@ -786,6 +778,13 @@ function addCifraFromDrive(file) {
   saveState();
   renderCifras();
   toast(`Cifra "${file.name}" adicionada!`);
+  // Limpa a search bar
+  const searchBar = document.getElementById("search-bar");
+  if (searchBar) {
+    searchBar.value = "";
+    state.search = "";
+    document.getElementById("search-dropdown").classList.add("hidden");
+  }
 }
 
 // --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
@@ -1034,13 +1033,8 @@ async function uploadCifraToDrive(cifra) {
   try {
     const tokenResponse = await gapiAuth();
     const accessToken = tokenResponse.access_token;
-    
-    let fileBlob;
-    if (cifra.url.startsWith('blob:') || cifra.url.startsWith('data:')) {
-      fileBlob = await fetch(cifra.url).then(r => r.blob());
-    } else {
-      fileBlob = await fetch(cifra.url).then(r => r.blob());
-    }
+
+    const fileBlob = await fetch(cifra.url).then(r => r.blob());
 
     const metadata = {
       name: cifra.title,
@@ -1049,22 +1043,21 @@ async function uploadCifraToDrive(cifra) {
     };
 
     const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     form.append('file', fileBlob);
 
     const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
       method: 'POST',
-      headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
-      body: form,
+      headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+      body: form
     });
 
-    if (!resp.ok) {
-      throw new Error('Falha no upload');
-    }
-
-    return await resp.json();
+    if (!resp.ok) throw new Error(await resp.text());
+    const result = await resp.json();
+    return result;
   } catch (error) {
-    console.error('Erro no upload:', error);
+    console.error('Erro no upload para o Drive:', error);
+    toast('Erro ao enviar para o Google Drive');
     throw error;
   }
 }
