@@ -163,42 +163,39 @@ function fileToBase64(file) {
 
 function waitForGapi() {
   return new Promise((resolve, reject) => {
-    if (window.gapi) return resolve();
-    if (window._gapiLoading) {
-      const interval = setInterval(() => {
-        if (window.gapi) {
-          clearInterval(interval);
-          resolve();
-        }
-      }, 50);
-      return;
-    }
-    window._gapiLoading = true;
+    if (window.google) return resolve();
+    
     const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Falha ao carregar gapi'));
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.onload = () => {
+      // Tempo para inicialização
+      setTimeout(resolve, 500);
+    };
+    script.onerror = reject;
     document.head.appendChild(script);
   });
 }
 
 async function gapiAuth() {
   await waitForGapi();
+  
   return new Promise((resolve, reject) => {
-    gapi.load('client:auth2', async () => {
-      await gapi.client.init({
-        apiKey: GOOGLE_API_KEY,
-        clientId: GOOGLE_CLIENT_ID,
-        discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-        scope: GOOGLE_SCOPES
-      });
-      const auth = gapi.auth2.getAuthInstance();
-      if (!auth.isSignedIn.get()) {
-        auth.signIn().then(resolve).catch(reject);
-      } else {
-        resolve();
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: GOOGLE_SCOPES,
+      callback: (response) => {
+        if (response.error) {
+          reject(response.error);
+        } else {
+          resolve(response);
+        }
+      },
+      error_callback: (error) => {
+        reject(error);
       }
     });
+    
+    client.requestAccessToken();
   });
 }
 
@@ -1033,36 +1030,41 @@ function openFullscreen(cifra) {
 
 // --- Upload para Google Drive ---
 async function uploadCifraToDrive(cifra) {
-  await gapiAuth();
+  try {
+    const tokenResponse = await gapiAuth();
+    const accessToken = tokenResponse.access_token;
+    
+    let fileBlob;
+    if (cifra.url.startsWith('blob:') || cifra.url.startsWith('data:')) {
+      fileBlob = await fetch(cifra.url).then(r => r.blob());
+    } else {
+      fileBlob = await fetch(cifra.url).then(r => r.blob());
+    }
 
-  let fileBlob;
-  if (cifra.url.startsWith('blob:') || cifra.url.startsWith('data:')) {
-    fileBlob = await fetch(cifra.url).then(r => r.blob());
-  } else {
-    fileBlob = await fetch(cifra.url).then(r => r.blob());
-  }
+    const metadata = {
+      name: cifra.title,
+      mimeType: fileBlob.type || "image/jpeg",
+      parents: [GOOGLE_DRIVE_FOLDER_ID]
+    };
 
-  const metadata = {
-    name: cifra.title,
-    mimeType: fileBlob.type || "image/jpeg"
-  };
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
+    form.append('file', fileBlob);
 
-  const accessToken = gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().access_token;
-  const form = new FormData();
-  form.append('metadata', new Blob([JSON.stringify(metadata)], {type: 'application/json'}));
-  form.append('file', fileBlob);
+    const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+      method: 'POST',
+      headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
+      body: form,
+    });
 
-  const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-    method: 'POST',
-    headers: new Headers({'Authorization': 'Bearer ' + accessToken}),
-    body: form,
-  });
+    if (!resp.ok) {
+      throw new Error('Falha no upload');
+    }
 
-  if (resp.ok) {
-    const data = await resp.json();
-    alert('Upload concluído! ID: ' + data.id);
-  } else {
-    alert('Falha ao fazer upload para o Google Drive!');
+    return await resp.json();
+  } catch (error) {
+    console.error('Erro no upload:', error);
+    throw error;
   }
 }
 
