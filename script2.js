@@ -615,70 +615,65 @@ function buscaCifrasLocal(query, cifrasTab) {
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
-  renderCifras();
+  renderCifras(); // As cifras já listadas permanecem
 
   const dropdown = document.getElementById("search-dropdown");
-  const cifrasTab = state.cifras[state.currentTab] || [];
   if (val.length === 0) {
     dropdown.classList.add("hidden");
     dropdown.innerHTML = "";
     return;
   }
-  const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
 
   dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
   dropdown.classList.remove("hidden");
-  const filesNuvem = await searchDrive(val);
+
+  // Buscar arquivos na pasta do Google Drive
+  const files = await searchDrive(val);
 
   dropdown.innerHTML = "";
-
-  if (resultadosLocal.length) {
-    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
-    resultadosLocal.forEach(c => {
-      const li = document.createElement("li");
-      li.textContent = stripExtension(c.title);
-      li.onclick = () => {
-        dropdown.classList.add("hidden");
-        document.getElementById("search-bar").value = "";
-        state.search = "";
-        renderCifras();
-      };
-      dropdown.appendChild(li);
-    });
-  }
-
-  const idsLocais = new Set(cifrasTab.map(c => c.id));
-  const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
-  if (filesNuvemFiltrados.length) {
-    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras na nuvem</li>`;
-    filesNuvemFiltrados.forEach(f => {
-      const li = document.createElement("li");
-      li.textContent = stripExtension(f.name);
-      li.onclick = () => {
-        addCifraFromDrive(f);
-        dropdown.classList.add("hidden");
-        document.getElementById("search-bar").value = "";
-        state.search = "";
-        renderCifras();
-      };
-      dropdown.appendChild(li);
-    });
-  }
-
-  if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
+  if (!files.length) {
     dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
+    return;
   }
+
+  // Ordenar alfabeticamente
+  files.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+  files.forEach(f => {
+    const li = document.createElement("li");
+    li.textContent = stripExtension(f.name);
+    li.onclick = () => {
+      addCifraFromDrive(f);
+      dropdown.classList.add("hidden");
+      document.getElementById("search-bar").value = "";
+      state.search = "";
+      renderCifras();
+    };
+    dropdown.appendChild(li);
+  });
 };
 
+// Mostrar dropdown ao focar, se houver texto
 document.getElementById("search-bar").onfocus = () => {
   if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
 };
 
+// Esconder dropdown ao perder o foco
 document.getElementById("search-bar").onblur = () => setTimeout(() => {
   document.getElementById("search-dropdown").classList.add("hidden");
 }, 200);
 
-// --- Adicionar cifra da nuvem ---
+// Função para buscar no Google Drive (já existente no seu código)
+async function searchDrive(query) {
+  if (!query) return [];
+  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink)&key=${GOOGLE_API_KEY}`;
+  const resp = await fetch(url);
+  if (!resp.ok) return [];
+  const data = await resp.json();
+  return data.files || [];
+}
+
+// Função para adicionar a cifra vinda do Drive (já existente no seu código)
 function addCifraFromDrive(file) {
   const tab = state.currentTab;
   if (!state.cifras[tab]) state.cifras[tab] = [];
@@ -693,16 +688,6 @@ function addCifraFromDrive(file) {
   saveState();
   renderCifras();
   toast(`Cifra "${file.name}" adicionada!`);
-}
-
-// --- Google Drive Search ---
-async function searchDrive(query) {
-  if (!query) return [];
-  const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink)&key=${GOOGLE_API_KEY}`;
-  const resp = await fetch(url);
-  if (!resp.ok) return [];
-  const data = await resp.json();
-  return data.files || [];
 }
 
 // --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
