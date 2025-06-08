@@ -1,20 +1,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 :root {
-  --primary: #1a202c;
-  --primary-light: #247a7a;
-  --primary-xlight: #f5f7f9;
-  --accent: #8b5cf6;
-  --accent-hover: #7c3aed;
-  --tab-online: #4f46e5;
+  --primary: #6495ED;
+  --primary-light: #89c5fd;
+  --primary-xlight: #d0e4fa;
+  --accent: #6495ED;
+  --accent-hover: #417dc1;
+  --tab-online: #4a90e2;
   --tab-offline: #bbbbbb;
-  --gray-bg: #f5f8f8;
-  --gray-text: #475151;
-  --gray-mid: #ccd4d4;
+  --gray-bg: #f8f9fa;
+  --gray-text: #23272f;
+  --gray-mid: #cbeafd;
   --white: #fff;
-  --danger: #e83c4c;
-  --shadow: 0 2px 16px rgba(0,0,0,0.08);
+  --danger: #e83c4c; /* Ou defina um azul escuro caso prefira um alerta azul */
+  --shadow: 0 2px 16px rgba(100, 149, 237, 0.10);
   --radius: 18px;
-  font-family: 'Poppins', sans-serif;
+  font-family: 'Inter', sans-serif;
 }
 body {
   margin: 0;
