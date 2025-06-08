@@ -769,3 +769,40 @@ body.dark-mode ::-webkit-scrollbar-thumb { background: #314159; }
 body.dark-mode ::-webkit-scrollbar { background: #1c2330; }
 
 .hidden { display: none !important; }
+
+#search-dropdown {
+  position: absolute;
+  width: calc(100% - 30px);
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  z-index: 1000;
+  margin-top: 5px;
+}
+
+.dropdown-header {
+  font-size: 0.8em;
+  color: #666;
+  padding: 8px 12px;
+  background: #f5f5f5;
+  border-bottom: 1px solid #eee;
+}
+
+.dropdown-item {
+  padding: 10px 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f8f8;
+}
+
+.dropdown-loading, .dropdown-empty {
+  padding: 15px;
+  text-align: center;
+  color: #888;
+}
