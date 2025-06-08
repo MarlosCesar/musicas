@@ -61,8 +61,8 @@ body {
 }
 
 .search-bar {
-  background: var(--primary-xlight);
-  border: 2px solid #8b5cf6;      /* Adiciona contorno */
+  background: #fff;
+  border: 2px solid #6495ED;      /* Adiciona contorno */
   border-radius: var(--radius);
   padding: 12px 20px 12px 20px;   /* Remove espaço da lupa à esquerda */
   width: 100%;
