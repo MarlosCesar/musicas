@@ -230,42 +230,56 @@ body.dark-mode .tab-close {
 body.dark-mode .tab-add { background: var(--accent-hover); color: #fff; }
 
   .tab-action-btn {
-  background: var(--primary-xlight);
-  color: var(--primary);
+  background: none;
   border: none;
-  border-radius: 10px;
-  padding: 9px 15px;
-  font-size: 1em;
-  margin-right: 7px;
+  color: var(--accent);
+  font-size: 1.15rem;
   cursor: pointer;
+  border-radius: 10px;
+  transition: background 0.15s, color 0.13s;
+  padding: 9px 17px;
+  margin-right: 7px;
+  margin-top: 5px;
+  margin-bottom: 5px;
   font-family: inherit;
-  transition: background 0.15s, color 0.15s;
+  font-weight: 500;
   box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   outline: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 .tab-action-btn:last-child { margin-right: 0; }
 .tab-action-btn:hover, .tab-action-btn:focus {
-  background: var(--accent-hover);
-  color: #fff;
+  background: var(--primary-xlight);
+  color: var(--primary);
 }
-
 body.dark-mode .tab-action-btn {
-  background: #22304a;
-  color: var(--accent);
+  color: var(--accent-hover);
+  background: none;
 }
 body.dark-mode .tab-action-btn:hover, body.dark-mode .tab-action-btn:focus {
-  background: var(--accent);
-  color: #fff;
+  background: #22304a;
+  color: #89CFF0;
 }
 
-/* Destaque para OK se quiser: */
+/* Botão OK com destaque azul bebê igual upload/seleção */
 .tab-action-btn.ok {
   background: var(--accent);
   color: #fff;
   font-weight: bold;
+  box-shadow: 0 2px 8px rgba(100,149,237,0.09);
+}
+.tab-action-btn.ok:hover, .tab-action-btn.ok:focus {
+  background: var(--accent-hover);
+  color: #fff;
 }
 body.dark-mode .tab-action-btn.ok {
   background: var(--accent-hover);
+  color: #fff;
+}
+body.dark-mode .tab-action-btn.ok:hover, body.dark-mode .tab-action-btn.ok:focus {
+  background: #4177cc;
   color: #fff;
 }
 
