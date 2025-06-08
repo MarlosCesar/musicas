@@ -1,20 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 :root {
-  --primary: #89CFF0;
-  --primary-light: #b9e4fa;
-  --primary-xlight: #e5f6fd;
-  --accent: #89CFF0;
-  --accent-hover: #6db5e6;
-  --tab-online: #1c8ad1;
+  --primary: #6495ED;
+  --primary-light: #FFFFFF;
+  --primary-xlight: #d0e4fa;
+  --accent: #6495ED;
+  --accent-hover: #417dc1;
+  --tab-online: #4a90e2;
   --tab-offline: #bbbbbb;
   --gray-bg: #f8f9fa;
   --gray-text: #23272f;
   --gray-mid: #cbeafd;
   --white: #fff;
-  --danger: #e83c4c;
-  --shadow: 0 2px 16px rgba(137, 207, 240, 0.10);
+  --danger: #e83c4c; /* Ou defina um azul escuro caso prefira um alerta azul */
+  --shadow: 0 2px 16px rgba(100, 149, 237, 0.10);
   --radius: 18px;
   font-family: 'Inter', sans-serif;
-}
 
 body {
   background: var(--gray-bg);
