@@ -3,7 +3,6 @@ const TABS_DEFAULT = [
   { name: "D. Noite", type: "default", mode: "offline" },
   { name: "Segunda", type: "default", mode: "offline" },
   { name: "Quarta", type: "default", mode: "offline" },
-  //{ name: "Santa Ceia", type: "default", mode: "offline" }
 ];
 const LOCALSTORE_KEY = "cifras2-app-state-v2";
 const POLL_INTERVAL = 5000;
