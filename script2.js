@@ -611,7 +611,32 @@ function buscaCifrasLocal(query, cifrasTab) {
   return resultado.slice(0, 20);
 }
 
-// --- Busca com dropdown ---
+// Modifique a função searchDrive para incluir autenticação
+async function searchDrive(query) {
+  try {
+    // Verifica se está autenticado
+    if (!window.gapi || !gapi.auth2.getAuthInstance().isSignedIn.get()) {
+      await gapiAuth();
+    }
+    
+    if (!query) return [];
+    const url = `https://www.googleapis.com/drive/v3/files?q='${GOOGLE_DRIVE_FOLDER_ID}'+in+parents+and+trashed=false+and+name+contains+'${encodeURIComponent(query)}'&fields=files(id,name,thumbnailLink)&key=${GOOGLE_API_KEY}`;
+    
+    const resp = await fetch(url);
+    if (!resp.ok) {
+      console.error('Erro na busca do Drive:', resp.statusText);
+      return [];
+    }
+    
+    const data = await resp.json();
+    return data.files || [];
+  } catch (error) {
+    console.error('Erro na busca do Drive:', error);
+    return [];
+  }
+}
+
+// Atualize o evento de input da barra de busca
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
@@ -629,52 +654,64 @@ document.getElementById("search-bar").oninput = async (e) => {
   // Busca local
   const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
 
+  // Mostra indicador de carregamento
   dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
   dropdown.classList.remove("hidden");
 
-  // Busca nuvem em paralelo
-  const filesNuvem = await searchDrive(val);
+  try {
+    // Busca nuvem
+    const filesNuvem = await searchDrive(val);
+    
+    dropdown.innerHTML = "";
 
-  dropdown.innerHTML = "";
+    // Seção de resultados locais
+    if (resultadosLocal.length) {
+      dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
+      resultadosLocal.forEach(c => {
+        const li = document.createElement("li");
+        li.textContent = stripExtension(c.title);
+        li.onclick = () => {
+          dropdown.classList.add("hidden");
+          document.getElementById("search-bar").value = "";
+          state.search = "";
+          renderCifras();
+        };
+        dropdown.appendChild(li);
+      });
+    }
 
-  // Seções locais
-  if (resultadosLocal.length) {
-    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
-    resultadosLocal.forEach(c => {
-      const li = document.createElement("li");
-      li.textContent = stripExtension(c.title);
-      li.onclick = () => {
-        dropdown.classList.add("hidden");
-        document.getElementById("search-bar").value = "";
-        state.search = "";
-        renderCifras();
-      };
-      dropdown.appendChild(li);
-    });
-  }
+    // Seção de resultados da nuvem
+    const idsLocais = new Set(cifrasTab.map(c => c.id));
+    const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
+    
+    if (filesNuvemFiltrados.length) {
+      dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras na nuvem</li>`;
+      filesNuvemFiltrados.forEach(f => {
+        const li = document.createElement("li");
+        li.textContent = stripExtension(f.name);
+        li.onclick = async () => {
+          try {
+            await addCifraFromDrive(f);
+            dropdown.classList.add("hidden");
+            document.getElementById("search-bar").value = "";
+            state.search = "";
+            renderCifras();
+          } catch (error) {
+            toast("Erro ao adicionar cifra da nuvem");
+            console.error(error);
+          }
+        };
+        dropdown.appendChild(li);
+      });
+    }
 
-  // Remover ids locais dos da nuvem
-  const idsLocais = new Set(cifrasTab.map(c => c.id));
-  const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
-  if (filesNuvemFiltrados.length) {
-    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras na nuvem</li>`;
-    filesNuvemFiltrados.forEach(f => {
-      const li = document.createElement("li");
-      li.textContent = stripExtension(f.name);
-      li.onclick = () => {
-        addCifraFromDrive(f);
-        dropdown.classList.add("hidden");
-        document.getElementById("search-bar").value = "";
-        state.search = "";
-        renderCifras();
-      };
-      dropdown.appendChild(li);
-    });
-  }
-
-  // Vazio
-  if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
-    dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
+    // Mensagem se não encontrar nada
+    if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
+      dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
+    }
+  } catch (error) {
+    console.error("Erro na busca:", error);
+    dropdown.innerHTML = "<li>Erro ao buscar cifras</li>";
   }
 };
 
