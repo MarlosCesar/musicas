@@ -10,7 +10,7 @@ const POLL_INTERVAL = 5000;
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
 const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
-const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive.file";
+const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive";
 
 let state = {
   tabs: [...TABS_DEFAULT],
@@ -1032,30 +1032,59 @@ async function uploadCifraToDrive(cifra) {
     const tokenResponse = await gapiAuth();
     const accessToken = tokenResponse.access_token;
 
-    const fileBlob = await fetch(cifra.url).then(r => r.blob());
+    // 1. Obter o blob da imagem
+    let fileBlob;
+    if (cifra.url.startsWith('blob:')) {
+      fileBlob = await fetch(cifra.url).then(r => r.blob());
+    } else if (cifra.url.startsWith('data:')) {
+      const byteString = atob(cifra.url.split(',')[1]);
+      const mimeType = cifra.url.match(/:(.*?);/)[1];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      fileBlob = new Blob([ab], { type: mimeType });
+    } else {
+      throw new Error("Tipo de URL não suportado");
+    }
 
+    // 2. Criar metadados
     const metadata = {
       name: cifra.title,
       mimeType: fileBlob.type || "image/jpeg",
       parents: [GOOGLE_DRIVE_FOLDER_ID]
     };
 
+    // 3. Configurar o upload
     const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' });
     form.append('file', fileBlob);
 
-    const resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-      method: 'POST',
-      headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
-      body: form
-    });
+    // 4. Fazer a requisição
+    const response = await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name`,
+      {
+        method: 'POST',
+        headers: new Headers({
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': `multipart/related; boundary=${form._boundary}`
+        }),
+        body: form
+      }
+    );
 
-    if (!resp.ok) throw new Error(await resp.text());
-    const result = await resp.json();
-    return result;
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Detalhes do erro:", errorData);
+      throw new Error(`Erro no upload: ${errorData.error.message}`);
+    }
+
+    return await response.json();
+
   } catch (error) {
-    console.error('Erro no upload para o Drive:', error);
-    toast('Erro ao enviar para o Google Drive');
+    console.error("Erro completo:", error);
+    toast(`Falha no upload: ${error.message}`);
     throw error;
   }
 }
