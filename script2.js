@@ -39,71 +39,71 @@ function renderTabs() {
     btn.tabIndex = 0;
 
     // Aba em edição
-    if (editingTabIndex === idx) {
-      btn.style.position = "relative";
-      btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent);" autofocus />`;
-      const actions = document.createElement("div");
-      actions.className = "suspended-actions";
+      if (editingTabIndex === idx) {
+  btn.style.position = "relative";
+  btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent);" autofocus />`;
+  const actions = document.createElement("div");
+  actions.className = "suspended-actions";
 
-      // OK
-      const ok = document.createElement("button");
-      ok.textContent = "✅ OK";
-      ok.className = "tab-action-btn";
-      ok.onclick = (e) => {
-        e.stopPropagation();
-        const val = btn.querySelector("input").value.trim();
-        if (val !== "") {
-          state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
-          state.cifras[val] = [];
-          editingTabIndex = null;
-          newTabValue = "";
-          saveState();
-          renderTabs();
-          setTab(val);
-        }
+  // OK (destaque)
+  const ok = document.createElement("button");
+  ok.textContent = "✅ OK";
+  ok.className = "tab-action-btn ok";
+  ok.onclick = (e) => {
+    e.stopPropagation();
+    const val = btn.querySelector("input").value.trim();
+    if (val !== "") {
+      state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
+      state.cifras[val] = [];
+      editingTabIndex = null;
+      newTabValue = "";
+      saveState();
+      renderTabs();
+      setTab(val);
+    }
+  };
+
+  // Limpar
+  const clear = document.createElement("button");
+  clear.textContent = "🧹 Limpar";
+  clear.className = "tab-action-btn";
+  clear.onclick = (e) => {
+    e.stopPropagation();
+    btn.querySelector("input").value = "";
+    btn.querySelector("input").focus();
+    newTabValue = "";
+  };
+
+  // Cancelar
+  const cancel = document.createElement("button");
+  cancel.textContent = "❌ Cancelar";
+  cancel.className = "tab-action-btn";
+  cancel.onclick = (e) => {
+    e.stopPropagation();
+    state.tabs.splice(idx, 1);
+    editingTabIndex = null;
+    newTabValue = "";
+    renderTabs();
+  };
+
+  actions.appendChild(ok);
+  actions.appendChild(clear);
+  actions.appendChild(cancel);
+  btn.appendChild(actions);
+
+  setTimeout(() => {
+    const input = btn.querySelector("input");
+    if (input) {
+      input.focus();
+      input.selectionStart = input.value.length;
+      input.oninput = (e) => newTabValue = e.target.value;
+      input.onkeydown = (e) => {
+        if (e.key === "Enter") ok.onclick(e);
+        if (e.key === "Escape") cancel.onclick(e);
       };
-
-      // Limpar
-      const clear = document.createElement("button");
-      clear.textContent = "🧹 Limpar";
-      clear.className = "tab-action-btn";
-      clear.onclick = (e) => {
-        e.stopPropagation();
-        btn.querySelector("input").value = "";
-        btn.querySelector("input").focus();
-        newTabValue = "";
-      };
-
-      // Cancelar
-      const cancel = document.createElement("button");
-      cancel.textContent = "❌ Cancelar";
-      cancel.className = "tab-action-btn";
-      cancel.onclick = (e) => {
-        e.stopPropagation();
-        state.tabs.splice(idx, 1);
-        editingTabIndex = null;
-        newTabValue = "";
-        renderTabs();
-      };
-
-      actions.appendChild(ok);
-      actions.appendChild(clear);
-      actions.appendChild(cancel);
-      btn.appendChild(actions);
-
-      setTimeout(() => {
-        const input = btn.querySelector("input");
-        if (input) {
-          input.focus();
-          input.selectionStart = input.value.length;
-          input.oninput = (e) => newTabValue = e.target.value;
-          input.onkeydown = (e) => {
-            if (e.key === "Enter") ok.onclick(e);
-            if (e.key === "Escape") cancel.onclick(e);
-          };
-        }
-      }, 10);
-    } else {
+    }
+  }, 10);
+} else {
       btn.textContent = tab.name;
       btn.onclick = () => setTab(tab.name);
 
