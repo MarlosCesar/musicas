@@ -1058,7 +1058,7 @@ async function uploadCifraToDrive(cifra) {
 
     // 3. Configurar o upload
     const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
     form.append('file', fileBlob);
 
     // 4. Fazer a requisição
