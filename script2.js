@@ -1,6 +1,6 @@
 const TABS_DEFAULT = [
-  { name: "Domingo Manhã", type: "default", mode: "offline" },
-  { name: "Domingo Noite", type: "default", mode: "offline" },
+  { name: "D. Manhã", type: "default", mode: "offline" },
+  { name: "D. Noite", type: "default", mode: "offline" },
   { name: "Segunda", type: "default", mode: "offline" },
   { name: "Quarta", type: "default", mode: "offline" },
   //{ name: "Santa Ceia", type: "default", mode: "offline" }
