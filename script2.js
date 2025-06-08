@@ -638,36 +638,41 @@ async function searchDrive(query) {
 
 // Atualize o evento de input da barra de busca
 // --- Busca com dropdown vinculado à caixa de busca ---
+// Atualize o evento de busca para manter o dropdown vinculado à caixa
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
   
   const dropdown = document.getElementById("search-dropdown");
+  const searchBar = document.getElementById("search-bar");
+  
+  // Posiciona o dropdown abaixo da caixa de busca
+  const searchRect = searchBar.getBoundingClientRect();
+  dropdown.style.top = `${searchRect.bottom + window.scrollY}px`;
+  dropdown.style.left = `${searchRect.left + window.scrollX}px`;
+  dropdown.style.width = `${searchRect.width}px`;
+
+  // Restante do código de busca permanece o mesmo...
   const cifrasTab = state.cifras[state.currentTab] || [];
 
-  // Se vazio, esconde dropdown
   if (val.length === 0) {
     dropdown.classList.add("hidden");
     renderCifras();
     return;
   }
 
-  // Mostra dropdown enquanto busca
   dropdown.classList.remove("hidden");
   dropdown.innerHTML = "<li class='dropdown-loading'>Buscando...</li>";
 
-  // Busca local imediata
   const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
-  
-  // Busca na nuvem em paralelo
   let filesNuvem = [];
+  
   try {
     filesNuvem = await searchDrive(val);
   } catch (error) {
     console.error("Erro na busca no Drive:", error);
   }
 
-  // Atualiza dropdown com resultados
   updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab);
 };
 
