@@ -670,17 +670,24 @@ document.getElementById("search-bar").oninput = async (e) => {
 function updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab) {
   dropdown.innerHTML = "";
 
-  // Seção de resultados locais
-  if (resultadosLocal.length) {
-    const localHeader = document.createElement("li");
-    localHeader.className = "dropdown-header";
-    localHeader.textContent = "Nesta aba";
-    dropdown.appendChild(localHeader);
+  const createHeader = (text) => {
+    const header = document.createElement("li");
+    header.className = "dropdown-header";
+    header.textContent = text;
+    return header;
+  };
 
+  // Ordenar local e nuvem antes de exibir
+  resultadosLocal.sort((a, b) => a.title.localeCompare(b.title, 'pt-BR'));
+  filesNuvem.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+
+  if (resultadosLocal.length) {
+    dropdown.appendChild(createHeader("Nesta aba"));
     resultadosLocal.forEach(c => {
       const li = createDropdownItem(c.title, () => {
-        document.getElementById("search-bar").value = c.title;
-        state.search = c.title;
+        const searchBar = document.getElementById("search-bar");
+        if (searchBar) searchBar.value = "";
+        state.search = "";
         renderCifras();
         dropdown.classList.add("hidden");
       });
@@ -688,24 +695,15 @@ function updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab)
     });
   }
 
-  // Seção de resultados da nuvem
   const idsLocais = new Set(cifrasTab.map(c => c.id));
   const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
-  
-  if (filesNuvemFiltrados.length) {
-    const cloudHeader = document.createElement("li");
-    cloudHeader.className = "dropdown-header";
-    cloudHeader.textContent = "No Google Drive";
-    dropdown.appendChild(cloudHeader);
 
+  if (filesNuvemFiltrados.length) {
+    dropdown.appendChild(createHeader("No Google Drive"));
     filesNuvemFiltrados.forEach(f => {
       const li = createDropdownItem(f.name, async () => {
         try {
           await addCifraFromDrive(f);
-          document.getElementById("search-bar").value = f.name;
-          state.search = f.name;
-          renderCifras();
-          dropdown.classList.add("hidden");
         } catch (error) {
           toast("Erro ao adicionar cifra");
           console.error(error);
@@ -715,7 +713,6 @@ function updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab)
     });
   }
 
-  // Mensagem se não encontrar nada
   if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
     const li = document.createElement("li");
     li.className = "dropdown-empty";
@@ -724,11 +721,18 @@ function updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab)
   }
 }
 
-// Helper para criar itens do dropdown
+// --- MODIFICADA: createDropdownItem (estilo mais profissional) ---
 function createDropdownItem(text, onClick) {
   const li = document.createElement("li");
   li.className = "dropdown-item";
+  li.style.padding = "6px 10px";
+  li.style.cursor = "pointer";
+  li.style.transition = "background 0.2s ease";
+  li.style.fontWeight = "500";
+  li.style.borderBottom = "1px solid #eee";
   li.textContent = stripExtension(text);
+  li.onmouseover = () => li.style.background = "#f2f2f2";
+  li.onmouseout = () => li.style.background = "";
   li.onclick = (e) => {
     e.stopPropagation();
     onClick();
@@ -778,7 +782,8 @@ function addCifraFromDrive(file) {
   saveState();
   renderCifras();
   toast(`Cifra "${file.name}" adicionada!`);
-  // Limpa a search bar
+
+  // Limpa a search bar completamente após adicionar
   const searchBar = document.getElementById("search-bar");
   if (searchBar) {
     searchBar.value = "";
