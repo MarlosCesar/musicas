@@ -615,42 +615,67 @@ function buscaCifrasLocal(query, cifrasTab) {
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
-  renderCifras(); // As cifras já listadas permanecem
+  renderCifras();
 
   const dropdown = document.getElementById("search-dropdown");
+  const cifrasTab = state.cifras[state.currentTab] || [];
+
   if (val.length === 0) {
     dropdown.classList.add("hidden");
     dropdown.innerHTML = "";
     return;
   }
 
+  // Busca local
+  const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
+
   dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
   dropdown.classList.remove("hidden");
 
-  // Buscar arquivos na pasta do Google Drive
-  const files = await searchDrive(val);
+  // Busca nuvem em paralelo
+  const filesNuvem = await searchDrive(val);
 
   dropdown.innerHTML = "";
-  if (!files.length) {
-    dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
-    return;
+
+  // Seções locais
+  if (resultadosLocal.length) {
+    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
+    resultadosLocal.forEach(c => {
+      const li = document.createElement("li");
+      li.textContent = stripExtension(c.title);
+      li.onclick = () => {
+        dropdown.classList.add("hidden");
+        document.getElementById("search-bar").value = "";
+        state.search = "";
+        renderCifras();
+      };
+      dropdown.appendChild(li);
+    });
   }
 
-  // Ordenar alfabeticamente
-  files.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  // Remover ids locais dos da nuvem
+  const idsLocais = new Set(cifrasTab.map(c => c.id));
+  const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
+  if (filesNuvemFiltrados.length) {
+    dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras na nuvem</li>`;
+    filesNuvemFiltrados.forEach(f => {
+      const li = document.createElement("li");
+      li.textContent = stripExtension(f.name);
+      li.onclick = () => {
+        addCifraFromDrive(f);
+        dropdown.classList.add("hidden");
+        document.getElementById("search-bar").value = "";
+        state.search = "";
+        renderCifras();
+      };
+      dropdown.appendChild(li);
+    });
+  }
 
-  files.forEach(f => {
-    const li = document.createElement("li");
-    li.textContent = stripExtension(f.name);
-    li.onclick = () => {
-      addCifraFromDrive(f);
-      dropdown.classList.add("hidden");
-      document.getElementById("search-bar").value = "";
-      state.search = "";
-      renderCifras();
-    };
-    dropdown.appendChild(li);
-  });
+  // Vazio
+  if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
+    dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
+  }
 };
 
 // Mostrar dropdown ao focar, se houver texto
