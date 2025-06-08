@@ -774,7 +774,7 @@ function addCifraFromDrive(file) {
   });
   saveState();
   renderCifras();
-  toast(`Cifra "${file.name}" adicionada!`);
+  toast(`Cifra adicionada!`);
 
   // Limpa a search bar completamente após adicionar
   const searchBar = document.getElementById("search-bar");
