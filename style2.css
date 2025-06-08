@@ -188,7 +188,7 @@ body {
   align-items: flex-end;
   gap: 0.7rem;
   overflow-x: auto;
-  background: var(--primary-xlight);
+  background: #fff;
   padding: 0 10px;
   scrollbar-width: none;
   scroll-behavior: smooth;
