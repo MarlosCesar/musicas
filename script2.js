@@ -459,6 +459,25 @@ document.getElementById("fab-upload")?.addEventListener('click', async () => {
   toast("Upload realizado para o Google Drive!");
 });
 
+window.addEventListener("DOMContentLoaded", () => {
+  const fabMenu = document.getElementById("fab-menu");
+  if (!document.getElementById("fab-darkmode")) {
+    const darkBtn = document.createElement("button");
+    darkBtn.id = "fab-darkmode";
+    darkBtn.className = "fab-menu-btn";
+    darkBtn.innerHTML = `<span id="icon-modo-escuro">🌙</span> Modo Escuro`;
+    fabMenu.appendChild(darkBtn);
+
+    darkBtn.onclick = () => {
+      document.body.classList.toggle("dark-mode");
+      darkBtn.innerHTML = document.body.classList.contains("dark-mode")
+        ? `<span id="icon-modo-claro">☀️</span> Modo Claro`
+        : `<span id="icon-modo-escuro">🌙</span> Modo Escuro`;
+      fabMenu.classList.add("hidden");
+    };
+  }
+});
+
 // --- File input upload (BASE64) ---
 document.getElementById("file-input").onchange = async (e) => {
   const files = Array.from(e.target.files || []);
