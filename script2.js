@@ -464,12 +464,13 @@ window.addEventListener("DOMContentLoaded", () => {
     darkBtn.innerHTML = `<span id="icon-modo-escuro">🌙</span> Modo Escuro`;
     fabMenu.appendChild(darkBtn);
 
-    darkBtn.onclick = () => {
+    darkBtn.onclick = (e) => {
+      e.stopPropagation(); // Impede que o clique feche o menu
       document.body.classList.toggle("dark-mode");
       darkBtn.innerHTML = document.body.classList.contains("dark-mode")
         ? `<span id="icon-modo-claro">☀️</span> Modo Claro`
         : `<span id="icon-modo-escuro">🌙</span> Modo Escuro`;
-      fabMenu.classList.add("hidden");
+      // Removido o fabMenu.classList.add("hidden") para manter o menu aberto
     };
   }
 });
