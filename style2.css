@@ -266,7 +266,7 @@ body {
   align-items: center;
   padding: 14px 16px;
   gap: 16px;
-  min-height: 84px;
+  min-height: 76px;
   transition: box-shadow 0.15s, border 0.15s;
   position: relative;
   cursor: pointer;
