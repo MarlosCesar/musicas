@@ -637,93 +637,126 @@ async function searchDrive(query) {
 }
 
 // Atualize o evento de input da barra de busca
+// --- Busca com dropdown vinculado à caixa de busca ---
 document.getElementById("search-bar").oninput = async (e) => {
   const val = e.target.value.trim();
   state.search = val;
-  renderCifras();
-
+  
   const dropdown = document.getElementById("search-dropdown");
   const cifrasTab = state.cifras[state.currentTab] || [];
 
+  // Se vazio, esconde dropdown
   if (val.length === 0) {
     dropdown.classList.add("hidden");
-    dropdown.innerHTML = "";
+    renderCifras();
     return;
   }
 
-  // Busca local
-  const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
-
-  // Mostra indicador de carregamento
-  dropdown.innerHTML = "<li>Buscando na nuvem...</li>";
+  // Mostra dropdown enquanto busca
   dropdown.classList.remove("hidden");
+  dropdown.innerHTML = "<li class='dropdown-loading'>Buscando...</li>";
 
+  // Busca local imediata
+  const resultadosLocal = buscaCifrasLocal(val, cifrasTab);
+  
+  // Busca na nuvem em paralelo
+  let filesNuvem = [];
   try {
-    // Busca nuvem
-    const filesNuvem = await searchDrive(val);
-    
-    dropdown.innerHTML = "";
-
-    // Seção de resultados locais
-    if (resultadosLocal.length) {
-      dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras nesta aba</li>`;
-      resultadosLocal.forEach(c => {
-        const li = document.createElement("li");
-        li.textContent = stripExtension(c.title);
-        li.onclick = () => {
-          dropdown.classList.add("hidden");
-          document.getElementById("search-bar").value = "";
-          state.search = "";
-          renderCifras();
-        };
-        dropdown.appendChild(li);
-      });
-    }
-
-    // Seção de resultados da nuvem
-    const idsLocais = new Set(cifrasTab.map(c => c.id));
-    const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
-    
-    if (filesNuvemFiltrados.length) {
-      dropdown.innerHTML += `<li style="font-size:.93em;color:#888;padding:4px 12px;">Cifras na nuvem</li>`;
-      filesNuvemFiltrados.forEach(f => {
-        const li = document.createElement("li");
-        li.textContent = stripExtension(f.name);
-        li.onclick = async () => {
-          try {
-            await addCifraFromDrive(f);
-            dropdown.classList.add("hidden");
-            document.getElementById("search-bar").value = "";
-            state.search = "";
-            renderCifras();
-          } catch (error) {
-            toast("Erro ao adicionar cifra da nuvem");
-            console.error(error);
-          }
-        };
-        dropdown.appendChild(li);
-      });
-    }
-
-    // Mensagem se não encontrar nada
-    if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
-      dropdown.innerHTML = "<li>Nenhuma cifra encontrada</li>";
-    }
+    filesNuvem = await searchDrive(val);
   } catch (error) {
-    console.error("Erro na busca:", error);
-    dropdown.innerHTML = "<li>Erro ao buscar cifras</li>";
+    console.error("Erro na busca no Drive:", error);
   }
+
+  // Atualiza dropdown com resultados
+  updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab);
 };
 
-// Mostrar dropdown ao focar, se houver texto
-document.getElementById("search-bar").onfocus = () => {
-  if (state.search) document.getElementById("search-dropdown").classList.remove("hidden");
-};
+// Função para atualizar os resultados no dropdown
+function updateDropdownResults(dropdown, resultadosLocal, filesNuvem, cifrasTab) {
+  dropdown.innerHTML = "";
 
-// Esconder dropdown ao perder o foco
-document.getElementById("search-bar").onblur = () => setTimeout(() => {
-  document.getElementById("search-dropdown").classList.add("hidden");
-}, 200);
+  // Seção de resultados locais
+  if (resultadosLocal.length) {
+    const localHeader = document.createElement("li");
+    localHeader.className = "dropdown-header";
+    localHeader.textContent = "Nesta aba";
+    dropdown.appendChild(localHeader);
+
+    resultadosLocal.forEach(c => {
+      const li = createDropdownItem(c.title, () => {
+        document.getElementById("search-bar").value = c.title;
+        state.search = c.title;
+        renderCifras();
+        dropdown.classList.add("hidden");
+      });
+      dropdown.appendChild(li);
+    });
+  }
+
+  // Seção de resultados da nuvem
+  const idsLocais = new Set(cifrasTab.map(c => c.id));
+  const filesNuvemFiltrados = filesNuvem.filter(f => !idsLocais.has(f.id));
+  
+  if (filesNuvemFiltrados.length) {
+    const cloudHeader = document.createElement("li");
+    cloudHeader.className = "dropdown-header";
+    cloudHeader.textContent = "No Google Drive";
+    dropdown.appendChild(cloudHeader);
+
+    filesNuvemFiltrados.forEach(f => {
+      const li = createDropdownItem(f.name, async () => {
+        try {
+          await addCifraFromDrive(f);
+          document.getElementById("search-bar").value = f.name;
+          state.search = f.name;
+          renderCifras();
+          dropdown.classList.add("hidden");
+        } catch (error) {
+          toast("Erro ao adicionar cifra");
+          console.error(error);
+        }
+      });
+      dropdown.appendChild(li);
+    });
+  }
+
+  // Mensagem se não encontrar nada
+  if (!resultadosLocal.length && !filesNuvemFiltrados.length) {
+    const li = document.createElement("li");
+    li.className = "dropdown-empty";
+    li.textContent = "Nenhum resultado encontrado";
+    dropdown.appendChild(li);
+  }
+}
+
+// Helper para criar itens do dropdown
+function createDropdownItem(text, onClick) {
+  const li = document.createElement("li");
+  li.className = "dropdown-item";
+  li.textContent = stripExtension(text);
+  li.onclick = (e) => {
+    e.stopPropagation();
+    onClick();
+  };
+  return li;
+}
+
+// Fechar dropdown ao clicar fora
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById("search-dropdown");
+  const searchBar = document.getElementById("search-bar");
+  
+  if (!dropdown.contains(e.target) && e.target !== searchBar) {
+    dropdown.classList.add("hidden");
+  }
+});
+
+// Manter dropdown visível enquanto o input está em foco
+document.getElementById("search-bar").addEventListener('focus', () => {
+  if (state.search) {
+    document.getElementById("search-dropdown").classList.remove("hidden");
+  }
+});
 
 // Função para buscar no Google Drive (já existente no seu código)
 async function searchDrive(query) {
