@@ -824,7 +824,6 @@ function addCifraFromDrive(file) {
     state.search = "";
     document.getElementById("search-dropdown").classList.add("hidden");
   }
-}
 
 // --- OCR/TRANSPOSE INTEGRAÇÃO PARA CIFRA EM IMAGEM ---
 function getProxiedUrl(originalUrl) {
