@@ -29,6 +29,45 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
+const style = document.createElement('style');
+style.textContent = `
+  .tab-popup-actions {
+    background: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    margin-top: 4px;
+    position: absolute;
+    z-index: 100;
+    animation: fadeInScale 0.2s ease-out forwards;
+  }
+
+  .tab-popup-btn {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    color: var(--accent);
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .tab-popup-btn:hover {
+    background: var(--primary-xlight);
+    transform: scale(1.1);
+  }
+
+  @keyframes fadeInScale {
+    0% { opacity: 0; transform: scale(0.95); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+`;
+document.head.appendChild(style);
+
+// renderTabs atualizado com popup de ações com ícones
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
   tabsElem.innerHTML = "";
@@ -37,76 +76,72 @@ function renderTabs() {
     btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
     btn.tabIndex = 0;
 
-    // Aba em edição
-      if (editingTabIndex === idx) {
-  btn.style.position = "relative";
-  btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent);" autofocus />`;
-  const actions = document.createElement("div");
-  actions.className = "suspended-actions";
+    if (editingTabIndex === idx) {
+      btn.style.position = "relative";
+      btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent); border-radius:8px; padding:4px 8px;" autofocus />`;
 
-  // OK (destaque)
-  const ok = document.createElement("button");
-  ok.textContent = "✅ OK";
-  ok.className = "tab-action-btn ok";
-  ok.onclick = (e) => {
-    e.stopPropagation();
-    const val = btn.querySelector("input").value.trim();
-    if (val !== "") {
-      state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
-      state.cifras[val] = [];
-      editingTabIndex = null;
-      newTabValue = "";
-      saveState();
-      renderTabs();
-      setTab(val);
-    }
-  };
+      const popup = document.createElement("div");
+      popup.className = "tab-popup-actions";
 
-  // Limpar
-  const clear = document.createElement("button");
-  clear.textContent = "🧹 Limpar";
-  clear.className = "tab-action-btn";
-  clear.onclick = (e) => {
-    e.stopPropagation();
-    btn.querySelector("input").value = "";
-    btn.querySelector("input").focus();
-    newTabValue = "";
-  };
+      const actions = [
+        { icon: "<i class='fas fa-check'></i>", title: "OK", onClick: () => {
+          const val = btn.querySelector("input").value.trim();
+          if (val !== "") {
+            state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
+            state.cifras[val] = [];
+            editingTabIndex = null;
+            newTabValue = "";
+            saveState();
+            renderTabs();
+            setTab(val);
+          }
+        } },
+        { icon: "<i class='fas fa-eraser'></i>", title: "Limpar", onClick: () => {
+          const input = btn.querySelector("input");
+          input.value = "";
+          input.focus();
+        } },
+        { icon: "<i class='fas fa-times'></i>", title: "Cancelar", onClick: () => {
+          state.tabs.splice(idx, 1);
+          editingTabIndex = null;
+          newTabValue = "";
+          renderTabs();
+        } },
+        { icon: "<i class='fas fa-pen'></i>", title: "Renomear", onClick: () => {
+          const input = btn.querySelector("input");
+          input.focus();
+          input.selectionStart = 0;
+          input.selectionEnd = input.value.length;
+        } }
+      ];
 
-  // Cancelar
-  const cancel = document.createElement("button");
-  cancel.textContent = "❌ Cancelar";
-  cancel.className = "tab-action-btn";
-  cancel.onclick = (e) => {
-    e.stopPropagation();
-    state.tabs.splice(idx, 1);
-    editingTabIndex = null;
-    newTabValue = "";
-    renderTabs();
-  };
+      actions.forEach(act => {
+        const b = document.createElement("button");
+        b.innerHTML = act.icon;
+        b.title = act.title;
+        b.className = "tab-popup-btn";
+        b.onclick = (e) => { e.stopPropagation(); act.onClick(); };
+        popup.appendChild(b);
+      });
 
-  actions.appendChild(ok);
-  actions.appendChild(clear);
-  actions.appendChild(cancel);
-  btn.appendChild(actions);
+      btn.appendChild(popup);
 
-  setTimeout(() => {
-    const input = btn.querySelector("input");
-    if (input) {
-      input.focus();
-      input.selectionStart = input.value.length;
-      input.oninput = (e) => newTabValue = e.target.value;
-      input.onkeydown = (e) => {
-        if (e.key === "Enter") ok.onclick(e);
-        if (e.key === "Escape") cancel.onclick(e);
-      };
-    }
-  }, 10);
-} else {
+      setTimeout(() => {
+        const input = btn.querySelector("input");
+        if (input) {
+          input.focus();
+          input.selectionStart = input.value.length;
+          input.oninput = (e) => newTabValue = e.target.value;
+          input.onkeydown = (e) => {
+            if (e.key === "Enter") actions[0].onClick(e);
+            if (e.key === "Escape") actions[2].onClick(e);
+          };
+        }
+      }, 10);
+    } else {
       btn.textContent = tab.name;
       btn.onclick = () => setTab(tab.name);
 
-      // Aba customizada: "x" vermelho no topo direito, com hover/touch
       if (tab.type === "custom") {
         const close = document.createElement("button");
         close.innerHTML = "&#10006;";
@@ -127,7 +162,6 @@ function renderTabs() {
         btn.classList.add('custom');
         btn.appendChild(close);
 
-        // Mostrar "x" ao toque (mobile)
         btn.addEventListener('touchstart', (e) => {
           btn.classList.toggle('tab-show-x');
           setTimeout(() => btn.classList.remove('tab-show-x'), 2000);
@@ -137,7 +171,6 @@ function renderTabs() {
     tabsElem.appendChild(btn);
   });
 
-  // Botão "+"
   const addBtn = document.createElement("button");
   addBtn.className = "tab-add";
   addBtn.innerHTML = "<i class='fas fa-plus'></i>";
