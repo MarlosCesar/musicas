@@ -809,6 +809,14 @@ function addCifraFromDrive(file) {
   renderCifras();
   toast(`Cifra adicionada!`);
 
+  const searchBar = document.getElementById("search-bar");
+  if (searchBar) {
+    searchBar.value = "";
+    state.search = "";
+    document.getElementById("search-dropdown").classList.add("hidden");
+  }
+}
+
   // Limpa a search bar completamente após adicionar
   const searchBar = document.getElementById("search-bar");
   if (searchBar) {
