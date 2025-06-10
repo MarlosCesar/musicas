@@ -173,7 +173,7 @@ popup.style.left = "0";
       }
     }
     tabsElem.appendChild(btn);
-  });
+  };
 
   const addBtn = document.createElement("button");
   addBtn.className = "tab-add";
