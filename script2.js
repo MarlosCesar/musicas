@@ -93,8 +93,8 @@ function renderTabs() {
 
       const popup = document.createElement("div");
       popup.className = "tab-popup-actions";
-popup.style.top = "calc(100% + 6px)";
-popup.style.left = "0";
+      popup.style.top = "calc(100% + 6px)";
+      popup.style.left = "0";
 
       const actions = [
         { icon: "<i class='fas fa-check'></i>", title: "OK", onClick: () => {
@@ -164,17 +164,11 @@ popup.style.left = "0";
         }
       };
     }
-      // Removido botão de fechar da aba customizada para evitar conflito com o botão Cancelar do menu flutuante
+    // Append the button for each tab
+    tabsElem.appendChild(btn);
+  }); // End of forEach loop
 
-       function setupButton(btn, tabsElem) {
-  btn.addEventListener('touchstart', (e) => {
-    btn.classList.toggle('tab-show-x');
-    setTimeout(() => btn.classList.remove('tab-show-x'), 2000);
-  });
-  
-  tabsElem.appendChild(btn);
-}
-
+  // Add new tab button (outside the forEach loop)
   const addBtn = document.createElement("button");
   addBtn.className = "tab-add";
   addBtn.innerHTML = "<i class='fas fa-plus'></i>";
@@ -186,7 +180,6 @@ popup.style.left = "0";
     renderTabs();
   };
   tabsElem.appendChild(addBtn);
-};
 }
 // --- Função para converter File em base64 (data URL) ---
 function fileToBase64(file) {
