@@ -39,12 +39,20 @@ style.textContent = `
     display: flex;
     flex-direction: row;
     gap: 6px;
-    margin-top: 4px;
     position: absolute;
-    z-index: 100;
+    z-index: 1000; /* Aumentado para garantir que fique acima de outros elementos */
     animation: fadeInScale 0.2s ease-out forwards;
-    overflow: visible;
-    min-width: max-content; /* Garante que o popup não fique muito estreito */
+    top: 100%; /* Posiciona logo abaixo do botão */
+    left: 0;
+    margin-top: 4px;
+    opacity: 0; /* Inicialmente invisível */
+    pointer-events: none; /* Ignora eventos de mouse inicialmente */
+    transform-origin: top left;
+  }
+
+  .tab-popup-actions.show {
+    opacity: 1;
+    pointer-events: auto; /* Permite interação quando visível */
   }
 
   .tab-popup-btn {
@@ -101,13 +109,15 @@ function renderTabs() {
     btn.tabIndex = 0;
 
     if (editingTabIndex === idx) {
-      btn.style.position = "relative";
-      btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" style="width:100px; font-size:1em; border:none; outline:2px solid var(--accent); border-radius:8px; padding:4px 8px;" autofocus />`;
+  btn.style.position = "relative"; // Importante para o posicionamento absoluto do popup
+  btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" />`;
 
-      const popup = document.createElement("div");
-      popup.className = "tab-popup-actions";
+  const popup = document.createElement("div");
+  popup.className = "tab-popup-actions";
       popup.style.top = "calc(100% + 6px)";
       popup.style.left = "0";
+
+      setTimeout(() => popup.classList.add("show"), 10);
 
       const actions = [
         { icon: "<i class='fas fa-check'></i>", title: "OK", onClick: () => {
