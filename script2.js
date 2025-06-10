@@ -186,7 +186,7 @@ popup.style.left = "0";
     renderTabs();
   };
   tabsElem.appendChild(addBtn);
-}
+});
 }
 // --- Função para converter File em base64 (data URL) ---
 function fileToBase64(file) {
