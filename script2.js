@@ -29,7 +29,7 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
-const style = document.createElement('style');
+const style = document.createElement("style");
 style.textContent = `
   .tab-popup-actions {
     background: var(--white);
@@ -43,6 +43,7 @@ style.textContent = `
     position: absolute;
     z-index: 100;
     animation: fadeInScale 0.2s ease-out forwards;
+    overflow: visible; /* Ensure popup is not clipped */
   }
 
   .tab-popup-btn {
@@ -63,6 +64,18 @@ style.textContent = `
   @keyframes fadeInScale {
     0% { opacity: 0; transform: scale(0.95); }
     100% { opacity: 1; transform: scale(1); }
+  }
+
+  #tabs {
+    display: flex;
+    flex-wrap: nowrap; /* Prevent tabs from wrapping */
+    overflow-x: auto; /* Allow horizontal scrolling if tabs overflow */
+    align-items: flex-start; /* Align items to the start */
+  }
+
+  .tab {
+    flex-shrink: 0; /* Prevent tabs from shrinking */
+    overflow: visible; /* Ensure content outside the button is visible */
   }
 `;
 document.head.appendChild(style);
@@ -97,7 +110,7 @@ function renderTabs() {
       popup.style.left = "0";
 
       const actions = [
-        { icon: "<i class='fas fa-check'></i>", title: "OK", onClick: () => {
+        { icon: "<i class=\'fas fa-check\'></i>", title: "OK", onClick: () => {
           const val = btn.querySelector("input").value.trim();
           if (val !== "") {
             state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
@@ -109,18 +122,18 @@ function renderTabs() {
             setTab(val);
           }
         } },
-        { icon: "<i class='fas fa-eraser'></i>", title: "Limpar", onClick: () => {
+        { icon: "<i class=\'fas fa-eraser\'></i>", title: "Limpar", onClick: () => {
           const input = btn.querySelector("input");
           input.value = "";
           input.focus();
         } },
-        { icon: "<i class='fas fa-times'></i>", title: "Cancelar", onClick: () => {
+        { icon: "<i class=\'fas fa-times\'></i>", title: "Cancelar", onClick: () => {
           state.tabs.splice(idx, 1);
           editingTabIndex = null;
           newTabValue = "";
           renderTabs();
         } },
-        { icon: "<i class='fas fa-pen'></i>", title: "Renomear", onClick: () => {
+        { icon: "<i class=\'fas fa-pen\'></i>", title: "Renomear", onClick: () => {
           const input = btn.querySelector("input");
           input.focus();
           input.selectionStart = 0;
@@ -171,7 +184,7 @@ function renderTabs() {
   // Add new tab button (outside the forEach loop)
   const addBtn = document.createElement("button");
   addBtn.className = "tab-add";
-  addBtn.innerHTML = "<i class='fas fa-plus'></i>";
+  addBtn.innerHTML = "<i class=\'fas fa-plus\'></i>";
   addBtn.onclick = () => {
     if (editingTabIndex !== null) return;
     state.tabs.push({ name: "", type: "custom", mode: "offline" });
