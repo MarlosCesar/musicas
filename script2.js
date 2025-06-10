@@ -67,6 +67,17 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Fecha o menu flutuante ao clicar fora
+window.addEventListener("click", (e) => {
+  const popup = document.querySelector(".tab-popup-actions");
+  const input = document.getElementById("new-tab-input");
+  if (popup && !popup.contains(e.target) && (!input || !input.contains(e.target))) {
+    editingTabIndex = null;
+    newTabValue = "";
+    renderTabs();
+  }
+});
+
 // renderTabs atualizado com popup de ações com ícones
 function renderTabs() {
   const tabsElem = document.getElementById("tabs");
@@ -82,6 +93,8 @@ function renderTabs() {
 
       const popup = document.createElement("div");
       popup.className = "tab-popup-actions";
+popup.style.top = "calc(100% + 6px)";
+popup.style.left = "0";
 
       const actions = [
         { icon: "<i class='fas fa-check'></i>", title: "OK", onClick: () => {
@@ -140,27 +153,18 @@ function renderTabs() {
       }, 10);
     } else {
       btn.textContent = tab.name;
-      btn.onclick = () => setTab(tab.name);
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        if (tab.type === "custom") {
+          editingTabIndex = idx;
+          newTabValue = tab.name;
+          renderTabs();
+        } else {
+          setTab(tab.name);
+        }
+      };
 
-      if (tab.type === "custom") {
-        const close = document.createElement("button");
-        close.innerHTML = "&#10006;";
-        close.title = "Excluir aba";
-        close.className = "tab-close";
-        close.onclick = (e) => {
-          e.stopPropagation();
-          const removed = state.tabs.splice(idx, 1)[0];
-          delete state.cifras[removed.name];
-          if (state.currentTab === removed.name) {
-            setTab(state.tabs[0]?.name || "");
-          } else {
-            renderTabs();
-            renderCifras();
-          }
-          saveState();
-        };
-        btn.classList.add('custom');
-        btn.appendChild(close);
+      // Removido botão de fechar da aba customizada para evitar conflito com o botão Cancelar do menu flutuante
 
         btn.addEventListener('touchstart', (e) => {
           btn.classList.toggle('tab-show-x');
