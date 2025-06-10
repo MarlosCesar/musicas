@@ -1314,4 +1314,5 @@ window.onload = () => {
   renderTabs();
   setTab(state.currentTab);
   if (typeof startPolling === "function") startPolling();
-}
+};
+  }
