@@ -154,8 +154,8 @@ popup.style.left = "0";
     } else {
       btn.textContent = tab.name;
       btn.onclick = (e) => {
-        e.stopPropagation();
-        if (tab.type === "custom") {
+        //e.stopPropagation();
+        if (tab?.type === "custom") {
           editingTabIndex = idx;
           newTabValue = tab.name;
           renderTabs();
