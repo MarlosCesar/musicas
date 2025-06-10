@@ -163,7 +163,7 @@ popup.style.left = "0";
           setTab(tab.name);
         }
       };
-
+    }
       // Removido botão de fechar da aba customizada para evitar conflito com o botão Cancelar do menu flutuante
 
        function setupButton(btn, tabsElem) {
