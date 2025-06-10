@@ -166,14 +166,14 @@ popup.style.left = "0";
 
       // Removido botão de fechar da aba customizada para evitar conflito com o botão Cancelar do menu flutuante
 
-        btn.addEventListener('touchstart', (e) => {
-          btn.classList.toggle('tab-show-x');
-          setTimeout(() => btn.classList.remove('tab-show-x'), 2000);
-        });
-      }
-    }
-    tabsElem.appendChild(btn);
-  };
+       function setupButton(btn, tabsElem) {
+  btn.addEventListener('touchstart', (e) => {
+    btn.classList.toggle('tab-show-x');
+    setTimeout(() => btn.classList.remove('tab-show-x'), 2000);
+  });
+  
+  tabsElem.appendChild(btn);
+}
 
   const addBtn = document.createElement("button");
   addBtn.className = "tab-add";
