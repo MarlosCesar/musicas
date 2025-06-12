@@ -307,7 +307,7 @@ function updateFloatControls() {
 
         // Fechar dropdown ao clicar fora
         document.addEventListener('click', (e) => {
-            if (!searchBar.contains(e.target) {
+            if (!searchBar.contains(e.target)) {
                 dropdown.classList.add('hidden');
             }
         });
