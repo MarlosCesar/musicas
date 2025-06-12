@@ -727,7 +727,15 @@ input:focus-visible {
         transform: scale(1); 
     }
 }
+
 .close-modal {
     cursor: pointer;
-    z-index: 1001; /* Garante que fique acima de outros elementos */
+    z-index: 1001;
+    background: transparent !important;
+    border: none !important;
+    font-size: 1.5rem;
+}
+
+.close-modal:hover {
+    color: var(--error) !important;
 }
