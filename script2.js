@@ -29,125 +29,33 @@ function stripExtension(filename) {
   return filename.replace(/\.[^/.]+$/, "");
 }
 
+// Atualize renderTabs() para renderizar também no mobile
 function renderTabs() {
-  const tabsElem = document.getElementById("tabs");
-  tabsElem.innerHTML = "";
-
-  state.tabs.forEach((tab, idx) => {
-    const btn = document.createElement("button");
-    btn.className = `tab${state.currentTab === tab.name ? " active" : ""} ${tab.mode || "offline"}`;
-    btn.tabIndex = 0;
-
-    if (editingTabIndex === idx) {
-      btn.style.position = "relative";
-      btn.innerHTML = `<input id="new-tab-input" type="text" value="${newTabValue}" placeholder="Nova aba" />`;
-
-      const popup = document.createElement("div");
-      popup.className = "tab-popup-actions";
-      popup.style.top = "calc(100% + 6px)";
-      popup.style.left = "0";
-      setTimeout(() => popup.classList.add("show"), 10);
-
-      const actions = [
-        {
-          icon: "<i class='fas fa-check'></i>",
-          title: "OK",
-          onClick: () => {
-            const val = btn.querySelector("input").value.trim();
-            if (val) {
-              state.tabs[idx] = { name: val, type: "custom", mode: "offline" };
-              state.cifras[val] = [];
-              editingTabIndex = null;
-              newTabValue = "";
-              saveState();
-              renderTabs();
-              setTab(val);
-            }
-          }
-        },
-        {
-          icon: "<i class='fas fa-eraser'></i>",
-          title: "Limpar",
-          onClick: () => {
-            btn.querySelector("input").value = "";
-            btn.querySelector("input").focus();
-          }
-        },
-        {
-          icon: "<i class='fas fa-times'></i>",
-          title: "Cancelar",
-          onClick: () => {
-            editingTabIndex = null;
-            newTabValue = "";
-            renderTabs();
-          }
-        },
-        {
-          icon: "<i class='fas fa-pen'></i>",
-          title: "Renomear",
-          onClick: () => {
-            const input = btn.querySelector("input");
-            input.focus();
-            input.setSelectionRange(0, input.value.length);
-          }
-        }
-      ];
-
-      actions.forEach(act => {
-        const b = document.createElement("button");
-        b.innerHTML = act.icon;
-        b.title = act.title;
-        b.className = "tab-popup-btn";
-        b.onclick = (e) => {
-          e.stopPropagation();
-          act.onClick();
-        };
-        popup.appendChild(b);
-      });
-
-      btn.appendChild(popup);
-
-      setTimeout(() => {
-        const input = btn.querySelector("input");
-        if (input) {
-          input.focus();
-          input.setSelectionRange(input.value.length, input.value.length);
-          input.oninput = (e) => newTabValue = e.target.value;
-          input.onkeydown = (e) => {
-            if (e.key === "Enter") actions[0].onClick();
-            if (e.key === "Escape") actions[2].onClick();
-          };
-        }
-      }, 10);
-    } else {
-      btn.textContent = tab.name;
-      btn.onclick = (e) => {
-        e.stopPropagation();
-        if (tab?.type === "custom") {
-          editingTabIndex = idx;
-          newTabValue = tab.name;
-          renderTabs();
-        } else {
-          setTab(tab.name);
-        }
-      };
-    }
-    tabsElem.appendChild(btn);
-  });
-
-  const addBtn = document.createElement("button");
-  addBtn.className = "tab-add";
-  addBtn.innerHTML = "<i class='fas fa-plus'></i> Adicionar Categoria";
-  addBtn.onclick = (e) => {
-    e.stopPropagation();
-    if (editingTabIndex !== null) return;
-    state.tabs.push({ name: "", type: "custom", mode: "offline" });
-    editingTabIndex = state.tabs.length - 1;
-    newTabValue = "";
-    renderTabs();
-  };
-  tabsElem.appendChild(addBtn);
+    const desktopTabs = document.getElementById("tabs");
+    const mobileTabs = document.getElementById("mobile-tabs");
+    
+    [desktopTabs, mobileTabs].forEach(container => {
+        if (!container) return;
+        container.innerHTML = "";
+        
+        state.tabs.forEach(tab => {
+            const tabBtn = document.createElement("button");
+            tabBtn.className = "tab-btn"; // Estilize conforme necessário
+            tabBtn.textContent = tab.name;
+            tabBtn.onclick = () => {
+                setTab(tab.name);
+                document.getElementById("mobile-menu").classList.add("hidden");
+            };
+            container.appendChild(tabBtn);
+        });
+    });
 }
+
+// Controle do menu hamburguer
+document.getElementById("hamburger-menu-btn").addEventListener("click", () => {
+    const menu = document.getElementById("mobile-menu");
+    menu.classList.toggle("hidden");
+});
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
@@ -282,10 +190,9 @@ function renderCifras() {
       const li = document.createElement("li");
       li.className = "cifra-item";
       li.dataset.id = cifra.id;
-      li.innerHTML = `
+       li.innerHTML = `
         <div class="cifra-header">
-          <input type="checkbox" class="cifra-checkbox" data-id="${cifra.id}" ${state.selection[state.currentTab]?.has(cifra.id) ? "checked" : ""}>
-          <span class="cifra-title">${cifra.title}</span>
+            <span class="cifra-title">${cifra.title.replace('.jpg', '')}</span>
           <div class="cifra-actions">
             <button class="edit-cifra-btn" data-id="${cifra.id}" title="Editar"><i class='fas fa-pen'></i></button>
             <button class="delete-cifra-btn" data-id="${cifra.id}" title="Excluir"><i class='fas fa-trash'></i></button>
@@ -337,110 +244,175 @@ function updateFloatControls() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  loadState();
-  renderTabs();
-  renderCifras();
-  updateFloatControls();
+  document.addEventListener("DOMContentLoaded", async () => {
+    // 1. Inicialização do estado
+    loadState();
+    
+    // 2. Renderização inicial
+    renderTabs();
+    renderCifras();
+    updateFloatControls();
 
-  // Hamburger menu functionality
-  const hamburgerBtn = document.getElementById('hamburger-menu-btn');
-  const sidebarMenu = document.getElementById('sidebar-menu');
-  const sidebarOverlay = document.getElementById('sidebar-overlay');
+    // 3. Controle do menu hamburguer e sidebar
+    const setupMenu = () => {
+        const hamburgerBtn = document.getElementById('hamburger-menu-btn');
+        const sidebarMenu = document.getElementById('sidebar-menu');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const mobileMenu = document.getElementById('mobile-menu');
 
-  hamburgerBtn.addEventListener('click', () => {
-    sidebarMenu.classList.toggle('open');
-    sidebarOverlay.classList.toggle('hidden');
-  });
+        hamburgerBtn?.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
 
-  sidebarOverlay.addEventListener('click', () => {
-    sidebarMenu.classList.remove('open');
-    sidebarOverlay.classList.add('hidden');
-  });
+        sidebarOverlay?.addEventListener('click', () => {
+            sidebarMenu.classList.remove('open');
+            sidebarOverlay.classList.add('hidden');
+        });
+    };
 
-  // FAB and FAB Menu
-  const fab = document.getElementById("fab");
-  const fabMenu = document.getElementById("fab-menu");
-  const fullscreenOverlay = document.getElementById("fullscreen-overlay");
+    // 4. Sistema de busca melhorado
+    const setupSearch = () => {
+        const searchBar = document.getElementById('search-bar');
+        const dropdown = document.getElementById('search-dropdown');
 
-  fab.addEventListener("click", () => {
-    fabMenu.classList.toggle("hidden");
-    fullscreenOverlay.classList.toggle("hidden");
-  });
+        searchBar?.addEventListener('input', (event) => {
+            const searchTerm = event.target.value.toLowerCase();
+            dropdown.innerHTML = "";
+            
+            if (searchTerm.length < 2) {
+                dropdown.classList.add('hidden');
+                return;
+            }
 
-  fullscreenOverlay.addEventListener("click", () => {
-    fabMenu.classList.add("hidden");
-    fullscreenOverlay.classList.add("hidden");
-  });
+            dropdown.classList.remove('hidden');
 
-  // FAB Menu buttons
-  document.getElementById("fab-buscar2").addEventListener("click", () => {
-    document.getElementById("file-input").click();
-    fabMenu.classList.add("hidden");
-    fullscreenOverlay.classList.add("hidden");
-  });
+            // Filtra e ordena alfabeticamente
+            const allCifras = Object.values(state.cifras).flat();
+            const filtered = allCifras
+                .filter(c => c.title.toLowerCase().includes(searchTerm))
+                .sort((a, b) => a.title.localeCompare(b.title));
 
-  document.getElementById("fab-camera").addEventListener("click", () => {
-    showToast("Funcionalidade de câmera em desenvolvimento!");
-    fabMenu.classList.add("hidden");
-    fullscreenOverlay.classList.add("hidden");
-  });
+            filtered.forEach(cifra => {
+                const li = document.createElement('li');
+                li.textContent = cifra.title.replace('.jpg', '');
+                li.onclick = () => {
+                    const tabName = Object.keys(state.cifras).find(tab => 
+                        state.cifras[tab].some(c => c.id === cifra.id));
+                    if (tabName) setTab(tabName);
+                    dropdown.classList.add('hidden');
+                };
+                dropdown.appendChild(li);
+            });
+        });
 
-  document.getElementById("fab-upload").addEventListener("click", async () => {
-    try {
-      await gapiAuth();
-      showToast("Autenticação com Google Drive bem-sucedida!");
-    } catch (error) {
-      console.error("Erro na autenticação com Google Drive:", error);
-      showToast("Erro na autenticação com Google Drive.");
-    }
-    fabMenu.classList.add("hidden");
-    fullscreenOverlay.classList.add("hidden");
-  });
+        // Fechar dropdown ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (!searchBar.contains(e.target) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    };
 
-  // Dark Mode Toggle
-  document.getElementById("fab-darkmode").addEventListener("click", () => {
-    document.body.classList.toggle("dark-mode");
-    const icon = document.getElementById("icon-modo-escuro");
-    if (document.body.classList.contains("dark-mode")) {
-      icon.textContent = "☀️";
-    } else {
-      icon.textContent = "🌙";
-    }
-  });
+    // 5. Controles flutuantes
+    const setupFloatControls = () => {
+        document.getElementById('select-all-btn')?.addEventListener('click', () => {
+            state.selection[state.currentTab] = new Set(state.cifras[state.currentTab].map(c => c.id));
+            renderCifras();
+        });
 
-  // File input
-  document.getElementById("file-input").addEventListener("change", async (event) => {
-    const files = event.target.files;
-    if (files.length > 0) {
-      const currentTabName = state.currentTab;
-      for (const file of files) {
-        if (file.type.startsWith("image/")) {
-          const dataUrl = await fileToBase64(file);
-          const newCifra = {
-            id: Date.now().toString(),
-            title: stripExtension(file.name),
-            content: `<img src="${dataUrl}" alt="${file.name}" style="max-width: 100%; height: auto;">`
-          };
-          state.cifras[currentTabName] = state.cifras[currentTabName] || [];
-          state.cifras[currentTabName].push(newCifra);
-        } else if (file.type === "text/plain") {
-          const textContent = await file.text();
-          const newCifra = {
-            id: Date.now().toString(),
-            title: stripExtension(file.name),
-            content: `<pre>${textContent}</pre>`
-          };
-          state.cifras[currentTabName] = state.cifras[currentTabName] || [];
-          state.cifras[currentTabName].push(newCifra);
-        } else {
-          showToast(`Tipo de arquivo não suportado: ${file.type}`);
-        }
-      }
-      saveState();
-      renderCifras();
-    }
-  });
+        document.getElementById('clear-selection-btn')?.addEventListener('click', () => {
+            clearSelection(state.currentTab);
+            renderCifras();
+        });
+
+        document.getElementById('delete-selected-btn')?.addEventListener('click', () => {
+            if (confirm("Tem certeza que deseja excluir as cifras selecionadas?")) {
+                removeCifras(state.currentTab, Array.from(state.selection[state.currentTab]));
+            }
+        });
+    };
+
+    // 6. Modal da nuvem
+    const setupCloudModal = () => {
+        const cloudModal = document.getElementById('cloud-modal');
+        document.getElementById('close-cloud-modal')?.addEventListener('click', () => {
+            cloudModal.classList.add('hidden');
+        });
+
+        // Implementação do carregamento da nuvem
+        document.getElementById('fab-upload')?.addEventListener('click', async () => {
+            try {
+                await gapiAuth();
+                cloudModal.classList.remove('hidden');
+                // Carregar cifras da nuvem aqui
+            } catch (error) {
+                showToast('Erro ao acessar a nuvem');
+            }
+        });
+    };
+
+    // 7. FAB e ações
+    const setupFAB = () => {
+        const fab = document.getElementById('fab');
+        const fabMenu = document.getElementById('fab-menu');
+        const fullscreenOverlay = document.getElementById('fullscreen-overlay');
+
+        fab?.addEventListener('click', () => {
+            fabMenu.classList.toggle('hidden');
+            fullscreenOverlay.classList.toggle('hidden');
+        });
+
+        document.getElementById('fab-buscar2')?.addEventListener('click', () => {
+            document.getElementById('file-input').click();
+        });
+    };
+
+    // 8. Modo escuro
+    const setupDarkMode = () => {
+        document.getElementById('fab-darkmode')?.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const icon = document.getElementById('icon-modo-escuro');
+            icon.textContent = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        });
+    };
+
+    // 9. Upload de arquivos
+    const setupFileUpload = () => {
+        document.getElementById('file-input')?.addEventListener('change', async (event) => {
+            const files = event.target.files;
+            if (!files.length) return;
+
+            for (const file of files) {
+                const cifra = {
+                    id: Date.now().toString(),
+                    title: stripExtension(file.name),
+                    content: file.type.startsWith('image/') 
+                        ? `<img src="${await fileToBase64(file)}" alt="${file.name}">`
+                        : `<pre>${await file.text()}</pre>`
+                };
+                
+                state.cifras[state.currentTab] = state.cifras[state.currentTab] || [];
+                state.cifras[state.currentTab].push(cifra);
+            }
+            
+            saveState();
+            renderCifras();
+            event.target.value = ''; // Reset input
+        });
+    };
+
+    // Inicializar todos os módulos
+    setupMenu();
+    setupSearch();
+    setupFloatControls();
+    setupCloudModal();
+    setupFAB();
+    setupDarkMode();
+    setupFileUpload();
+
+    // Debug
+    console.log('Aplicativo inicializado com sucesso');
+});
 
   // Cifra selection
   document.getElementById("cifra-list").addEventListener("change", (event) => {
@@ -520,17 +492,41 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
   // Search bar
-  document.getElementById("search-bar").addEventListener("input", (event) => {
-    state.search = event.target.value.toLowerCase();
-    renderCifras();
-  });
+  // Atualize a função de busca (por volta da linha 400)
+document.getElementById("search-bar").addEventListener("input", async (event) => {
+    const searchTerm = event.target.value.toLowerCase();
+    const dropdown = document.getElementById("search-dropdown");
+    
+    dropdown.innerHTML = "";
+    dropdown.classList.remove("hidden");
+
+    if (searchTerm.length < 2) {
+        dropdown.classList.add("hidden");
+        return;
+    }
+
+    // Filtra e ordena alfabeticamente
+    const allCifras = Object.values(state.cifras).flat();
+    const filtered = allCifras
+        .filter(c => c.title.toLowerCase().includes(searchTerm))
+        .sort((a, b) => a.title.localeCompare(b.title));
+
+    filtered.forEach(cifra => {
+        const li = document.createElement("li");
+        li.textContent = cifra.title.replace('.jpg', ''); // Remove .jpg
+        li.onclick = () => setTabAndHighlight(cifra);
+        dropdown.appendChild(li);
+    });
 });
 
-function showToast(message, duration = 3000) {
-  const toast = document.getElementById("toast");
-  toast.textContent = message;
-  toast.classList.add("show");
-  setTimeout(() => {
-    toast.classList.remove("show");
-  }, duration);
+function setTabAndHighlight(cifra) {
+    // Encontra a aba onde a cifra está
+    const tabName = Object.keys(state.cifras).find(tab => 
+        state.cifras[tab].some(c => c.id === cifra.id));
+    
+    if (tabName) {
+        setTab(tabName);
+        // Scroll e destaque para a cifra
+        document.querySelector(`[data-id="${cifra.id}"]`)?.scrollIntoView();
+    }
 }
