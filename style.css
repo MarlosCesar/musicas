@@ -727,3 +727,7 @@ input:focus-visible {
         transform: scale(1); 
     }
 }
+.close-modal {
+    cursor: pointer;
+    z-index: 1001; /* Garante que fique acima de outros elementos */
+}
