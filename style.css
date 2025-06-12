@@ -739,3 +739,21 @@ input:focus-visible {
 .close-modal:hover {
     color: var(--error) !important;
 }
+
+/* Garante que a modal fique invisível */
+.modal.hidden {
+    display: none !important; /* Sobrescreve qualquer outro estilo */
+}
+
+/* Estilo do botão de fechar */
+.close-modal {
+    cursor: pointer;
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--text-muted);
+    z-index: 1001;
+}
