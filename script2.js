@@ -511,19 +511,12 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Cloud modal - CÓDIGO CORRIGIDO
-const cloudModal = document.getElementById("cloud-modal");
-const closeCloudModalBtn = document.getElementById("close-cloud-modal");
-
-// Adicione este evento corrigido:
-closeCloudModalBtn?.addEventListener("click", function(e) {
-    e.stopPropagation(); // Impede a propagação do evento
-    cloudModal?.classList.add("hidden");
+  document.getElementById("close-cloud-modal")?.addEventListener("click", () => {
+    document.getElementById("cloud-modal").classList.add("hidden");
     
-    // Debug (opcional - remova depois de testar)
-    console.log("Modal fechada! Elementos:", {
-        modal: cloudModal,
-        botao: closeCloudModalBtn
-    });
+    // Debug final (opcional)
+    console.log("Modal ocultada visualmente. Classe atual:", 
+        document.getElementById("cloud-modal").className);
 });
 
   // Search bar
