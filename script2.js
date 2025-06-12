@@ -511,18 +511,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Cloud modal
-  const cloudModal = document.getElementById("cloud-modal");
-  const closeCloudModalBtn = document.getElementById("close-cloud-modal");
-  const addCloudBtn = document.getElementById("add-cloud-btn");
+ const cloudModal = document.getElementById("cloud-modal");
+const closeCloudModalBtn = document.getElementById("close-cloud-modal");
 
-  closeCloudModalBtn.addEventListener("click", () => {
-    cloudModal.classList.add("hidden");
-  });
-
-  addCloudBtn.addEventListener("click", () => {
-    showToast("Funcionalidade de adicionar da nuvem em desenvolvimento!");
-    cloudModal.classList.add("hidden");
-  });
+if (closeCloudModalBtn && cloudModal) {
+    closeCloudModalBtn.addEventListener("click", (e) => {
+        e.preventDefault(); // Evita comportamentos padrão indesejados
+        cloudModal.classList.add("hidden");
+        console.log("Modal fechada com sucesso!"); // Debug
+    });
+} else {
+    console.error("Elementos da modal não encontrados!");
+}
 
   // Search bar
   document.getElementById("search-bar").addEventListener("input", (event) => {
