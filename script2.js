@@ -510,19 +510,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Cloud modal
- const cloudModal = document.getElementById("cloud-modal");
+  // Cloud modal - CÓDIGO CORRIGIDO
+const cloudModal = document.getElementById("cloud-modal");
 const closeCloudModalBtn = document.getElementById("close-cloud-modal");
 
-if (closeCloudModalBtn && cloudModal) {
-    closeCloudModalBtn.addEventListener("click", (e) => {
-        e.preventDefault(); // Evita comportamentos padrão indesejados
-        cloudModal.classList.add("hidden");
-        console.log("Modal fechada com sucesso!"); // Debug
+// Adicione este evento corrigido:
+closeCloudModalBtn?.addEventListener("click", function(e) {
+    e.stopPropagation(); // Impede a propagação do evento
+    cloudModal?.classList.add("hidden");
+    
+    // Debug (opcional - remova depois de testar)
+    console.log("Modal fechada! Elementos:", {
+        modal: cloudModal,
+        botao: closeCloudModalBtn
     });
-} else {
-    console.error("Elementos da modal não encontrados!");
-}
+});
 
   // Search bar
   document.getElementById("search-bar").addEventListener("input", (event) => {
