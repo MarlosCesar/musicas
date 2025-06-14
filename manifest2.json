@@ -1,0 +1,16 @@
+{
+  "name": "Cifras 2.0",
+  "short_name": "Cifras",
+  "description": "Seu aplicativo de cifras moderno",
+  "start_url": "Cifras2.html",
+  "display": "standalone",
+  "background_color": "#f5f8f8",
+  "theme_color": "#1a202c",
+  "icons": [
+    {
+      "src": "favicon.svg", 
+      "sizes": "64x64",
+      "type": "image/svg+xml"
+    }
+  ]
+}
