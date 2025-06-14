@@ -1,63 +1,219 @@
 const TABS_DEFAULT = [
-    { name: "Domingo Manhã", type: "default", mode: "offline" },
-    { name: "Domingo Noite", type: "default", mode: "offline" },
-    { name: "Segunda", type: "default", mode: "offline" },
-    { name: "Quarta", type: "default", mode: "offline" }
+  { name: "D. Manhã", type: "default", mode: "offline" },
+  { name: "D. Noite", type: "default", mode: "offline" },
+  { name: "Segunda", type: "default", mode: "offline" },
+  { name: "Quarta", type: "default", mode: "offline" }
 ];
 
-const LOCALSTORE_KEY = "cifras2-app-state-v3";
+const LOCALSTORE_KEY = "cifras2-app-state-v2";
 const GOOGLE_DRIVE_FOLDER_ID = "1OzrvB4NCBRTDgMsE_AhQy0b11bdn3v82";
+const GOOGLE_API_KEY = "AIzaSyD2qLxX7fYIMxt34aeWWDsx_nWaSsFCguk";
 const GOOGLE_CLIENT_ID = "977942417278-0mfg7iehelnjfqmk5a32elsr7ll8hkil.apps.googleusercontent.com";
 const GOOGLE_SCOPES = "https://www.googleapis.com/auth/drive";
 
 let state = {
-    tabs: [...TABS_DEFAULT],
-    cifras: {},
-    selection: {},
-    currentTab: "Domingo Manhã",
-    search: "",
-    darkMode: false
+  tabs: [...TABS_DEFAULT],
+  cifras: {},
+  selection: {},
+  currentTab: "Domingo Manhã",
+  search: "",
+  onlineCache: {},
+  darkMode: localStorage.getItem('darkMode') === 'true'
 };
 
-// Utility Functions
-function stripExtension(filename) {
-    return filename.replace(/\.[^/.]+$/, "");
+// Inicializa o modo escuro
+function initDarkMode() {
+  if (state.darkMode) {
+    document.body.classList.add('dark-mode');
+    document.getElementById('icon-modo-escuro').textContent = '☀️';
+  } else {
+    document.body.classList.remove('dark-mode');
+    document.getElementById('icon-modo-escuro').textContent = '🌙';
+  }
 }
 
-function showToast(message, duration = 3000) {
-    const toast = document.getElementById("toast");
-    toast.textContent = message;
-    toast.classList.add("show");
+// Atualiza renderTabs() para incluir ícones e melhor organização
+function renderTabs() {
+    const desktopTabs = document.getElementById("tabs");
+    const mobileTabs = document.getElementById("mobile-tabs");
     
-    setTimeout(() => {
-        toast.classList.remove("show");
-    }, duration);
-}
-
-function fileToBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+    [desktopTabs, mobileTabs].forEach(container => {
+        if (!container) return;
+        container.innerHTML = "";
+        
+        state.tabs.forEach((tab, index) => {
+            const tabBtn = document.createElement("button");
+            tabBtn.className = `tab-btn flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
+                state.currentTab === tab.name ? 
+                'bg-blue-500 text-white' : 
+                'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`;
+            
+            tabBtn.innerHTML = `
+                <i class="fas ${getTabIcon(tab.name)} mr-3"></i>
+                <span>${tab.name}</span>
+            `;
+            
+            tabBtn.onclick = () => {
+                setTab(tab.name);
+                if (window.innerWidth < 768) {
+                    document.getElementById("mobile-menu").classList.add("hidden");
+                }
+            };
+            
+            container.appendChild(tabBtn);
+        });
     });
 }
 
-// State Management
-function saveState() {
-    const selectionToSave = {};
-    for (const tab in state.selection) {
-        selectionToSave[tab] = Array.from(state.selection[tab] || []);
+// Retorna ícone apropriado para cada tab
+function getTabIcon(tabName) {
+    if (tabName.includes("Manhã")) return "fa-sun";
+    if (tabName.includes("Noite")) return "fa-moon";
+    if (tabName.includes("Segunda") || tabName.includes("Quarta")) return "fa-calendar-day";
+    return "fa-music";
+}
+
+// Menu Hamburguer melhorado
+function setupMenu() {
+    const hamburgerBtn = document.getElementById('hamburger-menu-btn');
+    const sidebarMenu = document.getElementById('sidebar-menu');
+    const sidebarOverlay = document.getElementById('sidebar-overlay');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    hamburgerBtn?.addEventListener('click', () => {
+        sidebarMenu.classList.toggle('translate-x-0');
+        sidebarMenu.classList.toggle('-translate-x-full');
+        sidebarOverlay.classList.toggle('hidden');
+    });
+
+    sidebarOverlay?.addEventListener('click', () => {
+        sidebarMenu.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('hidden');
+    });
+}
+
+// Player de música simplificado
+function setupMusicPlayer() {
+    // Implementação básica - pode ser expandida
+    const audio = new Audio();
+    let currentSong = null;
+    
+    function playSong(song) {
+        currentSong = song;
+        audio.src = song.url;
+        audio.play().catch(e => console.error("Erro ao reproduzir:", e));
     }
     
-    localStorage.setItem(LOCALSTORE_KEY, JSON.stringify({
-        tabs: state.tabs,
-        cifras: state.cifras,
-        selection: selectionToSave,
-        currentTab: state.currentTab,
-        darkMode: state.darkMode
-    }));
+    // Exemplo de como integrar com as cifras
+    document.addEventListener('play-song', (e) => {
+        playSong(e.detail);
+    });
 }
+
+// Sistema de busca modernizado
+function setupSearch() {
+    const searchBar = document.getElementById('search-bar');
+    const dropdown = document.getElementById('search-dropdown');
+
+    searchBar?.addEventListener('input', debounce((event) => {
+        const searchTerm = event.target.value.toLowerCase().trim();
+        dropdown.innerHTML = "";
+        
+        if (searchTerm.length < 2) {
+            dropdown.classList.add('hidden');
+            return;
+        }
+
+        dropdown.classList.remove('hidden');
+
+        const allCifras = Object.values(state.cifras).flat();
+        const filtered = allCifras
+            .filter(c => c.title.toLowerCase().includes(searchTerm))
+            .sort((a, b) => a.title.localeCompare(b.title));
+
+        if (filtered.length === 0) {
+            const li = document.createElement('li');
+            li.className = 'p-3 text-gray-500 dark:text-gray-400';
+            li.textContent = 'Nenhuma cifra encontrada';
+            dropdown.appendChild(li);
+        } else {
+            filtered.forEach(cifra => {
+                const li = document.createElement('li');
+                li.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-200';
+                li.innerHTML = `
+                    <div class="font-medium">${cifra.title.replace('.jpg', '')}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">${Object.keys(state.cifras).find(tab => 
+                        state.cifras[tab].some(c => c.id === cifra.id))}</div>
+                `;
+                li.onclick = () => {
+                    setTabAndHighlight(cifra);
+                    dropdown.classList.add('hidden');
+                    searchBar.value = '';
+                };
+                dropdown.appendChild(li);
+            });
+        }
+    }, 300));
+
+    document.addEventListener('click', (e) => {
+        if (!searchBar.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// Modo escuro melhorado
+function setupDarkMode() {
+    const darkModeBtn = document.getElementById('fab-darkmode');
+    const icon = document.getElementById('icon-modo-escuro');
+    
+    darkModeBtn?.addEventListener('click', () => {
+        state.darkMode = !state.darkMode;
+        localStorage.setItem('darkMode', state.darkMode);
+        
+        if (state.darkMode) {
+            document.body.classList.add('dark-mode');
+            icon.textContent = '☀️';
+        } else {
+            document.body.classList.remove('dark-mode');
+            icon.textContent = '🌙';
+        }
+    });
+}
+
+// Função principal
+document.addEventListener("DOMContentLoaded", async () => {
+    // 1. Inicialização do estado
+    loadState();
+    initDarkMode();
+    
+    // 2. Renderização inicial
+    renderTabs();
+    renderCifras();
+    updateFloatControls();
+
+    // 3. Configurações de UI
+    setupMenu();
+    setupSearch();
+    setupFloatControls();
+    setupCloudModal();
+    setupFAB();
+    setupDarkMode();
+    setupFileUpload();
+    setupMusicPlayer();
+
+    console.log('Aplicativo inicializado com sucesso');
+});
+
 
 function loadState() {
     const saved = localStorage.getItem(LOCALSTORE_KEY);
