@@ -137,6 +137,13 @@ main {
     font-size: 1.1rem;
 }
 
+.cifra-image {
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 12px;
+    cursor: pointer;
+}
+
 /* Controles Flutuantes */
 .float-controls {
     position: fixed;
@@ -165,6 +172,28 @@ main {
     }
 }
 
+.float-controls button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.float-controls button:hover {
+    background-color: var(--primary-dark);
+}
+
+.float-controls button.hidden {
+    display: none;
+}
+
 /* FAB */
 .fab {
     position: fixed;
@@ -182,6 +211,8 @@ main {
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
     z-index: 90;
     transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
 }
 
 .fab:hover {
@@ -221,6 +252,13 @@ main {
     text-align: left;
     white-space: nowrap;
     transition: all 0.2s ease;
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .fab-menu-btn:hover {
@@ -265,6 +303,17 @@ main {
     transform: translateY(0);
 }
 
+.close-modal {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+}
+
 /* Toast */
 .toast {
     position: fixed;
@@ -285,6 +334,131 @@ main {
     opacity: 1;
 }
 
+/* Fullscreen Overlay */
+.fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.fullscreen-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.fullscreen-container {
+    position: relative;
+    max-width: 90%;
+    max-height: 90%;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fullscreen-image {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+    transition: transform 0.3s ease;
+    transform-origin: center center;
+}
+
+.fullscreen-controls {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    padding: 8px 16px;
+    border-radius: 24px;
+}
+
+.fullscreen-controls button {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.close-fullscreen {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+/* Chord Overlays */
+.chord-overlay {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #000;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    pointer-events: none;
+    z-index: 10;
+    font-size: 1.1rem;
+}
+
+/* Transpose Modal */
+.tone-control {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--primary);
+}
+
+.add-btn {
+    background-color: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.add-btn:hover {
+    background-color: var(--primary-dark);
+}
+
+.cancel-btn {
+    background-color: var(--secondary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.cancel-btn:hover {
+    background-color: var(--text-muted);
+}
+
 /* Responsividade */
 @media (max-width: 767px) {
     #sidebar-menu {
@@ -299,4 +473,82 @@ main {
     .float-controls {
         bottom: 80px;
     }
+}
+
+/* Dropdown de busca */
+.search-dropdown {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    z-index: 50;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.search-dropdown li {
+    padding: 10px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.search-dropdown li:hover {
+    background-color: var(--surface-secondary);
+}
+
+.search-dropdown .dropdown-header {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 8px 15px;
+    background-color: var(--surface-secondary);
+}
+
+.search-dropdown.hidden {
+    display: none;
+}
+
+/* Cloud List */
+.cloud-list {
+    max-height: 50vh;
+    overflow-y: auto;
+    margin: 16px 0;
+}
+
+.cloud-list label {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.cloud-list label:hover {
+    background-color: var(--surface-secondary);
+}
+
+.cloud-list img {
+    width: 40px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+/* Progress Indicator */
+.progress-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background-color: var(--primary-light);
+    z-index: 2000;
+    transform-origin: left;
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
 }
