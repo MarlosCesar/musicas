@@ -50,6 +50,19 @@ function getTabIcon(tabName) {
   return "fa-music";
 }
 
+function stripExtension(filename) {
+  return filename.replace(/\.[^/.]+$/, "");
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ==================== GERENCIAMENTO DE ESTADO ====================
 
 function saveState() {
@@ -94,6 +107,48 @@ function initDarkMode() {
 }
 
 // ==================== FUNÇÕES DE RENDERIZAÇÃO ====================
+
+function updateFloatControls() {
+  const floatControls = document.getElementById('float-controls');
+  if (!floatControls) return;
+
+  const currentCifras = state.cifras[state.currentTab] || [];
+  const selectedCount = state.selection[state.currentTab]?.size || 0;
+  
+  const selectAllBtn = document.getElementById('select-all-btn');
+  const clearSelectionBtn = document.getElementById('clear-selection-btn');
+  const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+  const renameSelectedBtn = document.getElementById('rename-selected-btn');
+  const uploadSelectedBtn = document.getElementById('upload-selected-btn');
+
+  if (!selectAllBtn || !clearSelectionBtn || !deleteSelectedBtn || !renameSelectedBtn || !uploadSelectedBtn) return;
+
+  if (currentCifras.length > 0) {
+    floatControls.classList.remove('hidden');
+    selectAllBtn.style.display = 'inline-block';
+    clearSelectionBtn.style.display = 'inline-block';
+    deleteSelectedBtn.style.display = 'inline-block';
+  } else {
+    floatControls.classList.add('hidden');
+    return;
+  }
+
+  if (selectedCount > 0) {
+    deleteSelectedBtn.classList.remove('hidden');
+    clearSelectionBtn.classList.remove('hidden');
+  } else {
+    deleteSelectedBtn.classList.add('hidden');
+    clearSelectionBtn.classList.add('hidden');
+  }
+
+  if (selectedCount === 1) {
+    renameSelectedBtn.classList.remove('hidden');
+    uploadSelectedBtn.classList.remove('hidden');
+  } else {
+    renameSelectedBtn.classList.add('hidden');
+    uploadSelectedBtn.classList.add('hidden');
+  }
+}
 
 function renderTabs() {
   const desktopTabs = document.getElementById('tabs');
@@ -220,7 +275,153 @@ function toggleDarkMode() {
   saveState();
 }
 
+function clearSelection() {
+  if (!state.selection[state.currentTab]) return;
+  state.selection[state.currentTab] = new Set();
+  updateFloatControls();
+}
+
+function removeCifras(tab, ids) {
+  if (!state.cifras[tab]) return;
+  
+  state.cifras[tab] = state.cifras[tab].filter(cifra => !ids.includes(cifra.id));
+  state.selection[tab] = new Set();
+  saveState();
+  renderCifras();
+}
+
 // ==================== CONFIGURAÇÃO DE EVENTOS ====================
+
+function setupSearch() {
+  const searchBar = document.getElementById('search-bar');
+  const dropdown = document.getElementById('search-dropdown');
+  
+  if (!searchBar || !dropdown) return;
+  
+  searchBar.addEventListener('input', debounce((e) => {
+    const term = e.target.value.toLowerCase().trim();
+    dropdown.innerHTML = '';
+    
+    if (term.length < 2) {
+      dropdown.classList.add('hidden');
+      return;
+    }
+    
+    dropdown.classList.remove('hidden');
+    
+    const allCifras = Object.values(state.cifras).flat();
+    const results = allCifras
+      .filter(c => c.title.toLowerCase().includes(term))
+      .sort((a, b) => a.title.localeCompare(b.title));
+    
+    if (results.length === 0) {
+      const li = document.createElement('li');
+      li.className = 'p-3 text-gray-500 dark:text-gray-400';
+      li.textContent = 'Nenhum resultado encontrado';
+      dropdown.appendChild(li);
+    } else {
+      results.forEach(cifra => {
+        const li = document.createElement('li');
+        li.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors';
+        li.innerHTML = `
+          <div class="font-medium">${cifra.title.replace('.jpg', '')}</div>
+          <div class="text-sm text-gray-500 dark:text-gray-400">
+            ${Object.keys(state.cifras).find(tab => state.cifras[tab].some(c => c.id === cifra.id))}
+          </div>
+        `;
+        li.addEventListener('click', () => {
+          setCurrentTab(Object.keys(state.cifras).find(tab => 
+            state.cifras[tab].some(c => c.id === cifra.id)));
+          dropdown.classList.add('hidden');
+          searchBar.value = '';
+        });
+        dropdown.appendChild(li);
+      });
+    }
+  }, 300));
+  
+  document.addEventListener('click', (e) => {
+    if (!searchBar.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.classList.add('hidden');
+    }
+  });
+}
+
+function setupFloatControlsListeners() {
+  const selectAllBtn = document.getElementById('select-all-btn');
+  const clearBtn = document.getElementById('clear-selection-btn');
+  const deleteBtn = document.getElementById('delete-selected-btn');
+  const renameBtn = document.getElementById('rename-selected-btn');
+  const uploadBtn = document.getElementById('upload-selected-btn');
+  
+  if (selectAllBtn) {
+    selectAllBtn.addEventListener('click', () => {
+      state.selection[state.currentTab] = new Set(
+        state.cifras[state.currentTab].map(c => c.id)
+      );
+      renderCifras();
+    });
+  }
+  
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      clearSelection();
+    });
+  }
+  
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', () => {
+      if (confirm('Tem certeza que deseja excluir as cifras selecionadas?')) {
+        removeCifras(state.currentTab, Array.from(state.selection[state.currentTab]));
+      }
+    });
+  }
+  
+  if (renameBtn) {
+    renameBtn.addEventListener('click', () => {
+      const selectedId = Array.from(state.selection[state.currentTab])[0];
+      const cifra = state.cifras[state.currentTab].find(c => c.id === selectedId);
+      if (cifra) {
+        const newTitle = prompt("Renomear cifra:", cifra.title);
+        if (newTitle !== null && newTitle.trim() !== "") {
+          cifra.title = newTitle.trim();
+          saveState();
+          renderCifras();
+        }
+      }
+    });
+  }
+  
+  if (uploadBtn) {
+    uploadBtn.addEventListener('click', async () => {
+      const selectedId = Array.from(state.selection[state.currentTab])[0];
+      const cifra = state.cifras[state.currentTab].find(c => c.id === selectedId);
+      if (cifra) {
+        try {
+          uploadBtn.disabled = true;
+          await gapiAuth();
+          
+          const response = await gapi.client.drive.files.create({
+            name: `${cifra.title}.html`,
+            mimeType: 'text/html',
+            fields: 'id',
+            parents: [GOOGLE_DRIVE_FOLDER_ID],
+          }, {
+            content: cifra.content,
+          });
+          
+          showToast('Cifra enviada para o Google Drive!');
+          console.log('Arquivo enviado:', response.result);
+        } catch (error) {
+          console.error('Erro ao enviar para o Google Drive:', error);
+          showToast('Erro ao enviar para o Google Drive');
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      }
+    });
+  }
+}
 
 function setupEventListeners() {
   // Menu Hamburguer
@@ -257,95 +458,7 @@ function setupEventListeners() {
   setupSearch();
   
   // Configuração dos controles flutuantes
-  setupFloatControls();
-}
-
-function setupSearch() {
-  const searchBar = document.getElementById('search-bar');
-  const dropdown = document.getElementById('search-dropdown');
-  
-  if (!searchBar || !dropdown) return;
-  
-  searchBar.addEventListener('input', debounce((e) => {
-    const term = e.target.value.toLowerCase().trim();
-    dropdown.innerHTML = '';
-    
-    if (term.length < 2) {
-      dropdown.classList.add('hidden');
-      return;
-    }
-    
-    dropdown.classList.remove('hidden');
-    
-    const allCifras = Object.values(state.cifras).flat();
-    const results = allCifras
-      .filter(c => c.title.toLowerCase().includes(term))
-      .sort((a, b) => a.title.localeCompare(b.title));
-    
-    if (results.length === 0) {
-      const li = document.createElement('li');
-      li.className = 'p-3 text-gray-500';
-      li.textContent = 'Nenhum resultado encontrado';
-      dropdown.appendChild(li);
-    } else {
-      results.forEach(cifra => {
-        const li = document.createElement('li');
-        li.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer';
-        li.textContent = cifra.title.replace('.jpg', '');
-        li.addEventListener('click', () => {
-          setCurrentTab(Object.keys(state.cifras).find(tab => 
-            state.cifras[tab].some(c => c.id === cifra.id)));
-          dropdown.classList.add('hidden');
-          searchBar.value = '';
-        });
-        dropdown.appendChild(li);
-      });
-    }
-  }, 300));
-  
-  document.addEventListener('click', (e) => {
-    if (!searchBar.contains(e.target) && !dropdown.contains(e.target)) {
-      dropdown.classList.add('hidden');
-    }
-  });
-}
-
-function setupFloatControls() {
-  const selectAllBtn = document.getElementById('select-all-btn');
-  const clearBtn = document.getElementById('clear-selection-btn');
-  const deleteBtn = document.getElementById('delete-selected-btn');
-  const renameBtn = document.getElementById('rename-selected-btn');
-  const uploadBtn = document.getElementById('upload-selected-btn');
-  
-  if (selectAllBtn) {
-    selectAllBtn.addEventListener('click', () => {
-      state.selection[state.currentTab] = new Set(
-        state.cifras[state.currentTab].map(c => c.id)
-      );
-      renderCifras();
-    });
-  }
-  
-  if (clearBtn) {
-    clearBtn.addEventListener('click', () => {
-      state.selection[state.currentTab] = new Set();
-      renderCifras();
-    });
-  }
-  
-  if (deleteBtn) {
-    deleteBtn.addEventListener('click', () => {
-      if (confirm('Tem certeza que deseja excluir as cifras selecionadas?')) {
-        const ids = Array.from(state.selection[state.currentTab]);
-        state.cifras[state.currentTab] = state.cifras[state.currentTab].filter(
-          c => !ids.includes(c.id)
-        );
-        state.selection[state.currentTab] = new Set();
-        saveState();
-        renderCifras();
-      }
-    });
-  }
+  setupFloatControlsListeners();
 }
 
 // ==================== INICIALIZAÇÃO ====================
@@ -371,3 +484,13 @@ window.addEventListener('resize', () => {
     closeMobileMenu();
   }
 });
+
+// Função para autenticação com Google API (opcional)
+async function gapiAuth() {
+  return new Promise((resolve, reject) => {
+    // Implementação da autenticação com Google API
+    // Esta é uma função placeholder - implemente conforme sua necessidade
+    showToast('Autenticação com Google Drive');
+    resolve();
+  });
+}
