@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Cifras Musicais</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -10,54 +10,67 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="manifest" href="manifest2.json">
 </head>
-<body class="bg-gray-50 text-gray-800 font-poppins min-h-screen transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen transition-colors duration-300 dark:bg-gray-900 dark:text-gray-100">
     <div class="app-container flex flex-col min-h-screen">
-        <!-- Header Moderno -->
+        <!-- Header Responsivo -->
         <header class="sticky top-0 z-30 bg-white dark:bg-gray-800 shadow-sm transition-colors duration-300">
             <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-                <!-- Hamburger Menu Icon -->
+                <!-- Menu Hamburguer (mobile) -->
                 <button id="hamburger-menu-btn" class="text-gray-600 dark:text-gray-300 focus:outline-none md:hidden">
                     <i class="fas fa-bars text-2xl"></i>
                 </button>
 
-                <!-- Logo e Título -->
+                <!-- Logo (desktop) -->
                 <div class="logo hidden md:block text-xl font-bold text-blue-600 dark:text-blue-400">
                     Cifras Musicais
                 </div>
                 
-                <!-- Barra de Busca -->
-                <div class="search-wrap flex-grow mx-4 relative">
+                <!-- Barra de Busca (centralizada) -->
+                <div class="search-wrap flex-grow mx-2 md:mx-4 relative">
                     <input id="search-bar" class="search-bar w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white transition-colors duration-300" type="search" placeholder="Buscar cifra..." autocomplete="on">
                     <ul id="search-dropdown" class="search-dropdown hidden absolute left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto"></ul>
                 </div>
 
                 <!-- Dark Mode Toggle -->
-                <button id="fab-darkmode" class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
-                    <span id="icon-modo-escuro" class="text-xl">🌙</span>
+                <button id="darkmode-toggle" class="p-2 rounded-full bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors duration-200">
+                    <span id="darkmode-icon" class="text-xl">🌙</span>
                 </button>
             </div>
         </header>
 
-        <!-- Layout Principal -->
-        <div class="flex flex-1">
-            <!-- Sidebar Menu -->
-            <nav id="sidebar-menu" class="fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] bg-white dark:bg-gray-800 shadow-lg z-40 transform -translate-x-full transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:shadow-none md:w-auto md:h-auto md:bg-transparent">
-                <div class="p-4">
+        <!-- Layout Principal Flexível -->
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar Menu (desktop) -->
+            <nav id="sidebar-menu" class="hidden md:flex md:flex-col w-64 h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transition-all duration-300">
+                <div class="p-4 overflow-y-auto">
                     <h2 class="text-xl font-bold mb-4 dark:text-white">Categorias</h2>
                     <div id="tabs" class="flex flex-col space-y-2">
-                        <!-- Tabs will be rendered here by JavaScript -->
+                        <!-- Tabs serão renderizadas aqui pelo JavaScript -->
                     </div>
-                    <button class="tab-add mt-4 w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200">
+                    <button id="add-tab-btn" class="tab-add mt-4 w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200">
                         <i class="fas fa-plus mr-2"></i> Adicionar Categoria
                     </button>
                 </div>
             </nav>
 
-            <!-- Overlay para quando o menu está aberto -->
-            <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-50 z-30 hidden md:hidden"></div>
+            <!-- Overlay para menu mobile -->
+            <div id="sidebar-overlay" class="fixed inset-0 bg-black opacity-50 z-40 hidden"></div>
+
+            <!-- Menu Mobile (slide-in) -->
+            <nav id="mobile-menu" class="fixed top-16 left-0 w-64 h-[calc(100vh-4rem)] bg-white dark:bg-gray-800 shadow-lg z-40 transform -translate-x-full transition-transform duration-300 ease-in-out md:hidden">
+                <div class="p-4 overflow-y-auto h-full">
+                    <h2 class="text-xl font-bold mb-4 dark:text-white">Categorias</h2>
+                    <div id="mobile-tabs" class="flex flex-col space-y-2">
+                        <!-- Tabs serão renderizadas aqui pelo JavaScript -->
+                    </div>
+                    <button id="add-tab-mobile-btn" class="tab-add mt-4 w-full py-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200">
+                        <i class="fas fa-plus mr-2"></i> Adicionar Categoria
+                    </button>
+                </div>
+            </nav>
 
             <!-- Conteúdo Principal -->
-            <main class="flex-1 container mx-auto px-4 py-6 min-h-[80vh] transition-all duration-300">
+            <main class="flex-1 overflow-y-auto p-4 md:p-6 transition-all duration-300">
                 <section id="cifra-list-section" class="cifra-list-section">
                     <div id="empty-state" class="empty-state max-w-2xl mx-auto text-center py-16" style="display: flex;">
                         <div class="bg-gray-200 dark:bg-gray-700 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl w-16 h-16 mx-auto mb-6 flex items-center justify-center">
@@ -68,8 +81,8 @@
                     <ul id="cifra-list" class="cifra-list max-w-4xl mx-auto mt-8" style="display: none;"></ul>
                 </section>
                 
-                <!-- Controles Flutuantes -->
-                <div id="float-controls" class="float-controls hidden">
+                <!-- Controles Flutuantes (mobile) -->
+                <div id="float-controls" class="float-controls hidden md:flex">
                     <button id="select-all-btn" title="Selecionar todas"><i class="fas fa-check-double"></i></button>
                     <button id="clear-selection-btn" title="Limpar seleção"><i class="fas fa-eraser"></i></button>
                     <button id="delete-selected-btn" title="Excluir selecionadas"><i class="fas fa-trash"></i></button>
@@ -82,12 +95,12 @@
                 
                 <!-- Menu FAB -->
                 <div id="fab-menu" class="fab-menu hidden">
-                    <button id="fab-buscar2" class="fab-menu-btn"><i class="fas fa-upload"></i> Importar imagem</button>
+                    <button id="fab-import" class="fab-menu-btn"><i class="fas fa-upload"></i> Importar imagem</button>
                     <button id="fab-camera" class="fab-menu-btn"><i class="fas fa-camera"></i> Tirar Foto</button>
                     <button id="fab-upload" class="fab-menu-btn"><i class="fas fa-cloud-upload-alt"></i> Enviar p/ Nuvem</button>
                 </div>
                 
-                <input id="file-input" type="file" class="hidden" accept="image/*" multiple="">
+                <input id="file-input" type="file" class="hidden" accept="image/*" multiple>
                 
                 <!-- Modal para seleção na nuvem -->
                 <div id="cloud-modal" class="modal hidden">
