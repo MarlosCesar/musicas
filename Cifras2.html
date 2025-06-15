@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Cifras Musicais</title>
+    <meta name="description" content="Seu aplicativo de cifras moderno com OCR e transposição">
+    <meta name="theme-color" content="#1A202C">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
@@ -88,6 +90,7 @@
                     <button id="delete-selected-btn" title="Excluir selecionadas"><i class="fas fa-trash"></i></button>
                     <button id="rename-selected-btn" title="Renomear selecionada" class="hidden"><i class="fas fa-pen"></i></button>
                     <button id="upload-selected-btn" title="Upload para Drive" class="hidden"><i class="fas fa-cloud-upload-alt"></i></button>
+                    <button id="transpose-btn" title="Transpor acordes" class="hidden"><i class="fas fa-exchange-alt"></i></button>
                 </div>
                 
                 <!-- FAB Principal -->
@@ -98,6 +101,7 @@
                     <button id="fab-import" class="fab-menu-btn"><i class="fas fa-upload"></i> Importar imagem</button>
                     <button id="fab-camera" class="fab-menu-btn"><i class="fas fa-camera"></i> Tirar Foto</button>
                     <button id="fab-upload" class="fab-menu-btn"><i class="fas fa-cloud-upload-alt"></i> Enviar p/ Nuvem</button>
+                    <button id="fab-ocr" class="fab-menu-btn"><i class="fas fa-eye"></i> Reconhecer Acordes</button>
                 </div>
                 
                 <input id="file-input" type="file" class="hidden" accept="image/*" multiple>
@@ -112,11 +116,43 @@
                     </div>
                 </div>
                 
-                <div id="fullscreen-overlay" class="fullscreen-overlay hidden"></div>
+                <!-- Modal de Transposição -->
+                <div id="transpose-modal" class="modal hidden">
+                    <div class="modal-content">
+                        <button id="close-transpose-modal" class="close-modal" aria-label="Fechar">×</button>
+                        <h2 class="dark:text-white">Transpor Acordes</h2>
+                        <div class="flex items-center justify-center my-4">
+                            <button id="transpose-down" class="tone-control"><i class="fas fa-minus-circle text-2xl"></i></button>
+                            <span id="transpose-value" class="mx-4 text-xl font-bold">0</span>
+                            <button id="transpose-up" class="tone-control"><i class="fas fa-plus-circle text-2xl"></i></button>
+                        </div>
+                        <div class="flex justify-between">
+                            <button id="apply-transposition" class="add-btn">Aplicar</button>
+                            <button id="reset-transposition" class="cancel-btn">Resetar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="fullscreen-overlay" class="fullscreen-overlay hidden">
+                    <div class="fullscreen-container">
+                        <button class="close-fullscreen">&times;</button>
+                        <img id="fullscreen-image" class="fullscreen-image" src="" alt="">
+                        <div class="fullscreen-controls">
+                            <button class="zoom-out"><i class="fas fa-search-minus"></i></button>
+                            <button class="zoom-reset"><i class="fas fa-search"></i> 100%</button>
+                            <button class="zoom-in"><i class="fas fa-search-plus"></i></button>
+                            <button class="detect-chords"><i class="fas fa-music"></i> Acordes</button>
+                        </div>
+                        <div id="chord-overlays"></div>
+                    </div>
+                </div>
+                
                 <div id="toast" class="toast"></div>
             </main>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+    <script src="https://apis.google.com/js/api.js"></script>
     <script src="script2.js"></script>
 </body>
 </html>
