@@ -864,6 +864,124 @@ function setupFileInput() {
   });
 }
 
+function setupSearch() {
+    const searchBar = document.getElementById('search-bar');
+    const searchDropdown = document.getElementById('search-dropdown');
+    
+    if (!searchBar || !searchDropdown) return;
+
+    // Função para buscar cifras
+    const performSearch = debounce(async (query) => {
+        if (query.trim() === '') {
+            searchDropdown.classList.add('hidden');
+            return;
+        }
+
+        // Limpa resultados anteriores
+        searchDropdown.innerHTML = '';
+        
+        // Busca local
+        const localResults = searchLocalCifras(query);
+        
+        if (localResults.length > 0) {
+            const localHeader = document.createElement('div');
+            localHeader.className = 'dropdown-header';
+            localHeader.textContent = 'Local';
+            searchDropdown.appendChild(localHeader);
+            
+            localResults.forEach(result => {
+                const item = document.createElement('li');
+                item.textContent = result.title;
+                item.onclick = () => {
+                    setCurrentTab(result.tab);
+                    searchBar.value = '';
+                    searchDropdown.classList.add('hidden');
+                    // Você pode adicionar lógica para destacar o resultado se necessário
+                };
+                searchDropdown.appendChild(item);
+            });
+        }
+
+        // Busca no Google Drive (opcional)
+        try {
+            const driveResults = await searchDriveCifras(query);
+            if (driveResults.length > 0) {
+                const driveHeader = document.createElement('div');
+                driveHeader.className = 'dropdown-header';
+                driveHeader.textContent = 'Google Drive';
+                searchDropdown.appendChild(driveHeader);
+                
+                driveResults.forEach(file => {
+                    const item = document.createElement('li');
+                    item.innerHTML = `
+                        <div class="flex items-center">
+                            ${file.thumbnailLink ? `<img src="${file.thumbnailLink}" alt="${file.name}" class="w-8 h-8 mr-2">` : ''}
+                            <span>${file.name}</span>
+                        </div>
+                    `;
+                    item.onclick = () => {
+                        // Lógica para adicionar cifra do Drive
+                        addCifraFromDrive(file);
+                        searchBar.value = '';
+                        searchDropdown.classList.add('hidden');
+                    };
+                    searchDropdown.appendChild(item);
+                });
+            }
+        } catch (error) {
+            console.error("Erro na busca do Drive:", error);
+        }
+
+        if (searchDropdown.children.length > 0) {
+            searchDropdown.classList.remove('hidden');
+        } else {
+            searchDropdown.classList.add('hidden');
+        }
+    }, 300);
+
+    // Event listeners
+    searchBar.addEventListener('input', (e) => {
+        performSearch(e.target.value);
+    });
+
+    searchBar.addEventListener('focus', () => {
+        if (searchBar.value.trim() !== '' && searchDropdown.children.length > 0) {
+            searchDropdown.classList.remove('hidden');
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!searchBar.contains(e.target) && !searchDropdown.contains(e.target)) {
+            searchDropdown.classList.add('hidden');
+        }
+    });
+}
+
+// Função auxiliar para busca local
+function searchLocalCifras(query) {
+    const results = [];
+    query = query.toLowerCase();
+    
+    for (const tab in state.cifras) {
+        state.cifras[tab].forEach(cifra => {
+            if (cifra.title.toLowerCase().includes(query)) {
+                results.push({
+                    ...cifra,
+                    tab: tab
+                });
+            }
+        });
+    }
+    
+    return results;
+}
+
+// Função para adicionar cifra do Drive (exemplo)
+async function addCifraFromDrive(file) {
+    // Implemente a lógica para baixar e adicionar a cifra do Drive
+    showToast(`Cifra "${file.name}" adicionada do Drive`);
+}
+
 // ==================== CONFIGURAÇÃO DE EVENTOS ====================
 
 function setupEventListeners() {
